@@ -1,0 +1,8 @@
+{
+  "extends": "@plata/ts-config/hono-framework",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
