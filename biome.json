@@ -1,0 +1,68 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "!skills-lock.json",
+      "!**/.agents",
+      "!**/.codex",
+      "!**/.zed",
+      "!**/.expo",
+      "!**/node_modules",
+      "!bun.lock",
+      "!**/dist",
+      "!**/.turbo",
+      "!**/routeTree.gen.ts",
+      "!**/uniwind-env.d.ts",
+      "!**/src/env.ts"
+    ]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "useExhaustiveDependencies": "info"
+      },
+      "suspicious": {
+        "noUndeclaredEnvVars": "error"
+      },
+      "performance": {
+        "noJsxPropsBind": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["packages/ui/src/components/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noLabelWithoutControl": "off",
+            "noNoninteractiveElementInteractions": "off",
+            "useKeyWithClickEvents": "off",
+            "useSemanticElements": "off"
+          }
+        }
+      }
+    }
+  ],
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "semicolons": "asNeeded"
+    }
+  },
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/react",
+    "ultracite/biome/tanstack"
+  ]
+}

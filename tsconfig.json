@@ -1,0 +1,6 @@
+{
+  "extends": "@plata/ts-config/base",
+  "compilerOptions": {
+    "strictNullChecks": true
+  }
+}

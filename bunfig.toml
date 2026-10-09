@@ -1,0 +1,7 @@
+env = false
+
+[install]
+linker = "isolated"
+
+[run]
+noOrphans = true

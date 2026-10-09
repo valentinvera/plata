@@ -1,0 +1,19 @@
+[mcp_servers.context7]
+command = "bunx"
+args = ["-y", "@upstash/context7-mcp"]
+
+[mcp_servers.shadcn]
+command = "bunx"
+args = ["-y", "shadcn@latest", "mcp"]
+
+[mcp_servers.planetscale]
+type = "http"
+url = "https://mcp.pscale.dev/mcp/planetscale"
+
+[mcp_servers.better-auth]
+type = "http"
+url = "https://mcp.inkeep.com/better-auth/mcp"
+
+[mcp_servers.expo-mcp]
+type = "http"
+url = "https://mcp.expo.dev/mcp"
