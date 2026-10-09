@@ -31,7 +31,7 @@ env:
 jobs:
   quality:
     name: Lint, tipos y tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       # Las actions van pineadas a SHA (no a tags movibles) para mitigar
