@@ -1,0 +1,24 @@
+{
+  "name": "@plata/trpc",
+  "version": "0.0.0",
+  "private": "true",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plata/auth": "workspace:*",
+    "@plata/db": "workspace:*",
+    "@trpc/client": "catalog:",
+    "@trpc/server": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@plata/ts-config": "workspace:*",
+    "typescript": "^7.0.2"
+  }
+}

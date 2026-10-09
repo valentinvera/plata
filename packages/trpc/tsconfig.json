@@ -1,0 +1,7 @@
+{
+  "extends": "@plata/ts-config/hono-framework",
+  "compilerOptions": {
+    "noEmit": true,
+    "strictNullChecks": true
+  }
+}
