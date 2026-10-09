@@ -1,0 +1,11 @@
+{
+  "extends": "@plata/ts-config/react-library",
+  "include": ["**/*.ts", "**/*.tsx"],
+  "compilerOptions": {
+    "types": ["vite/client"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "@plata/ui/*": ["../../packages/ui/src/*"]
+    }
+  }
+}
