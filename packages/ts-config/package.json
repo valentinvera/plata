@@ -1,0 +1,17 @@
+{
+  "name": "@plata/ts-config",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    "./base": "./base.json",
+    "./expo-framework": "./expo-framework.json",
+    "./hono-framework": "./hono-framework.json",
+    "./react-library": "./react-library.json"
+  },
+  "files": [
+    "base.json",
+    "expo-framework.json",
+    "hono-framework.json",
+    "react-library.json"
+  ]
+}
