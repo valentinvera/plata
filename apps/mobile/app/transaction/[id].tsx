@@ -107,7 +107,7 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
       </Text>
 
       <TextField>
-        <Label>Amount</Label>
+        <Label>{`Amount (${transaction.currency})`}</Label>
         <Input
           keyboardType="decimal-pad"
           onChangeText={setAmountInput}
