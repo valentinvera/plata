@@ -12,6 +12,10 @@ function StackLayout() {
   return (
     <Stack>
       <Stack.Screen
+        name="add-transaction"
+        options={{ presentation: "modal", title: "Add transaction" }}
+      />
+      <Stack.Screen
         name="modal"
         options={{ presentation: "modal", title: "Modal" }}
       />
