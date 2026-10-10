@@ -9,7 +9,12 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
 import { AppThemeProvider } from "@/contexts/app-theme-context"
+import { useAppMeta } from "@/src/features/transactions/hooks"
 import { registerNotificationListener } from "@/src/features/transactions/notification-listener"
+import {
+  ONBOARDING_COMPLETED_KEY,
+  shouldShowOnboarding,
+} from "@/src/features/transactions/onboarding"
 import { getSharedText } from "@/src/features/transactions/share"
 import { queryClient } from "@/utils/trpc"
 
@@ -31,6 +36,7 @@ function StackLayout() {
         name="notifications"
         options={{ title: "Automatic import" }}
       />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen
         name="transaction/[id]"
         options={{ title: "Transaction" }}
@@ -47,16 +53,28 @@ function ShareIntentHandler() {
   const { hasShareIntent, resetShareIntent, shareIntent } =
     useShareIntentContext()
   const sharedText = getSharedText(shareIntent)
+  const { data: onboardingValue, isLoading } = useAppMeta(
+    ONBOARDING_COMPLETED_KEY
+  )
 
   useEffect(() => {
-    if (hasShareIntent && sharedText) {
-      router.push({
-        pathname: "/add-transaction",
-        params: { text: sharedText },
-      })
-      resetShareIntent()
+    if (!(hasShareIntent && sharedText) || isLoading) {
+      return
     }
-  }, [hasShareIntent, resetShareIntent, sharedText])
+
+    // Don't bypass onboarding on a fresh install: hold the share until the user
+    // has finished it, then import.
+    if (shouldShowOnboarding(onboardingValue ?? null)) {
+      router.push("/onboarding")
+      return
+    }
+
+    router.push({
+      pathname: "/add-transaction",
+      params: { text: sharedText },
+    })
+    resetShareIntent()
+  }, [hasShareIntent, isLoading, onboardingValue, resetShareIntent, sharedText])
 
   return null
 }
