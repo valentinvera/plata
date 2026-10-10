@@ -1,7 +1,10 @@
-import { launchImageLibraryAsync } from "expo-image-picker"
+import {
+  getPendingResultAsync,
+  launchImageLibraryAsync,
+} from "expo-image-picker"
 import { router, useLocalSearchParams } from "expo-router"
 import { Button, Card, Chip, Input, Label, TextField } from "heroui-native"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { ScrollView, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
@@ -95,20 +98,7 @@ export default function AddTransactionScreen() {
     await handleSave("suggested")
   }, [handleSave])
 
-  const handleImportScreenshot = useCallback(async () => {
-    setError(null)
-
-    const result = await launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 1,
-    })
-
-    const uri = result.canceled ? null : result.assets[0]?.uri
-
-    if (!uri) {
-      return
-    }
-
+  const processImage = useCallback(async (uri: string) => {
     setIsImporting(true)
     try {
       const recognized = await recognizeTransactionText(uri)
@@ -124,6 +114,34 @@ export default function AddTransactionScreen() {
       setIsImporting(false)
     }
   }, [])
+
+  const handleImportScreenshot = useCallback(async () => {
+    setError(null)
+
+    const result = await launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 1,
+    })
+
+    const uri = result.canceled ? null : result.assets[0]?.uri
+
+    if (uri) {
+      await processImage(uri)
+    }
+  }, [processImage])
+
+  // Android can recreate the activity while the picker is open; recover the
+  // selected image from the pending result when the screen mounts again.
+  useEffect(() => {
+    getPendingResultAsync()
+      .then((pending) => {
+        if (pending && "canceled" in pending && !pending.canceled) {
+          const uri = pending.assets[0]?.uri
+          return uri ? processImage(uri) : undefined
+        }
+      })
+      .catch(() => undefined)
+  }, [processImage])
 
   return (
     <Container className="px-5">
