@@ -21,6 +21,7 @@ function StackLayout() {
       <Stack.Screen name="week" options={{ title: "This week" }} />
       <Stack.Screen name="catch-up" options={{ title: "Catch up" }} />
       <Stack.Screen name="budgets" options={{ title: "Budgets" }} />
+      <Stack.Screen name="accounts" options={{ title: "Accounts" }} />
       <Stack.Screen
         name="transaction/[id]"
         options={{ title: "Transaction" }}

@@ -40,6 +40,11 @@ CREATE TABLE IF NOT EXISTS accounts (
   kind TEXT NOT NULL,
   created_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS app_meta (
+  key TEXT PRIMARY KEY NOT NULL,
+  value TEXT NOT NULL
+);
 `
 
 let databasePromise: Promise<SQLiteDatabase> | null = null
@@ -58,26 +63,41 @@ async function ensureTransactionColumns(
   }
 }
 
+const ACCOUNTS_SEEDED_KEY = "accounts_seeded"
+
 async function seedDefaultAccounts(database: SQLiteDatabase): Promise<void> {
-  const result = await database.getFirstAsync<{ count: number }>(
-    "SELECT COUNT(*) as count FROM accounts"
+  const seeded = await database.getFirstAsync<{ value: string }>(
+    "SELECT value FROM app_meta WHERE key = ?",
+    ACCOUNTS_SEEDED_KEY
   )
 
-  if ((result?.count ?? 0) > 0) {
+  if (seeded) {
     return
   }
 
   await database.withTransactionAsync(async () => {
-    await Promise.all(
-      DEFAULT_ACCOUNTS.map((account) =>
-        database.runAsync(
-          "INSERT INTO accounts (id, name, kind, created_at) VALUES (?, ?, ?, ?)",
-          account.id,
-          account.name,
-          account.kind,
-          Date.now()
+    const result = await database.getFirstAsync<{ count: number }>(
+      "SELECT COUNT(*) as count FROM accounts"
+    )
+
+    if ((result?.count ?? 0) === 0) {
+      await Promise.all(
+        DEFAULT_ACCOUNTS.map((account) =>
+          database.runAsync(
+            "INSERT INTO accounts (id, name, kind, created_at) VALUES (?, ?, ?, ?)",
+            account.id,
+            account.name,
+            account.kind,
+            Date.now()
+          )
         )
       )
+    }
+
+    await database.runAsync(
+      "INSERT OR REPLACE INTO app_meta (key, value) VALUES (?, ?)",
+      ACCOUNTS_SEEDED_KEY,
+      "1"
     )
   })
 }

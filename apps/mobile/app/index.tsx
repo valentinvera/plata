@@ -67,6 +67,10 @@ export default function TransactionsScreen() {
     router.push("/budgets")
   }, [])
 
+  const handleAccounts = useCallback(() => {
+    router.push("/accounts")
+  }, [])
+
   const handleConfirm = useCallback(
     (id: string) => {
       updateState.mutate({ id, state: "confirmed" })
@@ -145,6 +149,9 @@ export default function TransactionsScreen() {
       </Button>
       <Button className="mt-2" onPress={handleBudgets} variant="outline">
         <Button.Label>Budgets</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handleAccounts} variant="outline">
+        <Button.Label>Accounts</Button.Label>
       </Button>
     </View>
   )
