@@ -34,5 +34,6 @@ describe("parseAmountInput", () => {
     expect(parseAmountInput("1.2.3")).toBeNull()
     expect(parseAmountInput("1,234")).toBeNull()
     expect(parseAmountInput(",50")).toBeNull()
+    expect(parseAmountInput("90071992547409,93")).toBeNull()
   })
 })

@@ -51,5 +51,10 @@ export function parseAmountInput(value: string): number | null {
   const normalized = trimmed.replace(/\./g, "").replace(",", ".")
   const parsed = Number.parseFloat(normalized)
 
-  return Number.isFinite(parsed) ? Math.round(parsed * 100) : null
+  if (!Number.isFinite(parsed)) {
+    return null
+  }
+
+  const cents = Math.round(parsed * 100)
+  return Number.isSafeInteger(cents) ? cents : null
 }
