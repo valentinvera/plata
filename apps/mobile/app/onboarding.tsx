@@ -1,7 +1,8 @@
-import { router } from "expo-router"
+import { router, useFocusEffect } from "expo-router"
 import { Button, Card } from "heroui-native"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useState } from "react"
 import { Platform, Text, View } from "react-native"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 
 import { Container } from "@/components/container"
 import { useSetAppMeta } from "@/src/features/transactions/hooks"
@@ -21,13 +22,18 @@ export default function OnboardingScreen() {
     null
   )
 
+  const insets = useSafeAreaInsets()
   const refreshPermission = useCallback(async () => {
     setPermission(await getNotificationPermission())
   }, [])
 
-  useEffect(() => {
-    refreshPermission().catch(() => setPermission("unknown"))
-  }, [refreshPermission])
+  // Refresh when the screen regains focus, e.g. after granting access in the
+  // Android settings the button opens.
+  useFocusEffect(
+    useCallback(() => {
+      refreshPermission().catch(() => setPermission("unknown"))
+    }, [refreshPermission])
+  )
 
   const finish = useCallback(async () => {
     await setAppMeta.mutateAsync({
@@ -41,6 +47,7 @@ export default function OnboardingScreen() {
 
   return (
     <Container className="px-5">
+      <View style={{ height: insets.top }} />
       <Text className="pt-6 pb-2 font-bold text-3xl text-foreground">
         Tu plata ordenada sola
       </Text>
