@@ -91,6 +91,10 @@ export default function TransactionsScreen() {
     router.push("/accounts")
   }, [])
 
+  const handleNotifications = useCallback(() => {
+    router.push("/notifications")
+  }, [])
+
   const handleConfirm = useCallback(
     (id: string) => {
       updateState.mutate({ id, state: "confirmed" })
@@ -166,6 +170,9 @@ export default function TransactionsScreen() {
       </Button>
       <Button className="mt-2" onPress={handleAccounts} variant="outline">
         <Button.Label>Accounts</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handleNotifications} variant="outline">
+        <Button.Label>Automatic import</Button.Label>
       </Button>
 
       <Text className="mt-4 mb-2 text-muted text-sm">Filter by account</Text>
