@@ -1,10 +1,15 @@
 import { router } from "expo-router"
-import { Button, Card, Spinner } from "heroui-native"
-import { useCallback, useMemo } from "react"
-import { Pressable, SectionList, Text, View } from "react-native"
+import { Button, Card, Chip, Spinner } from "heroui-native"
+import { useCallback, useMemo, useState } from "react"
+import { Pressable, ScrollView, SectionList, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
-import { getAccountName } from "@/src/features/transactions/accounts"
+import {
+  ALL_ACCOUNTS,
+  filterTransactionsByAccount,
+  getAccountName,
+  NO_ACCOUNT,
+} from "@/src/features/transactions/accounts"
 import { getCategoryById } from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
 import {
@@ -38,13 +43,22 @@ export default function TransactionsScreen() {
   const { data: accountsData } = useAccounts()
 
   const accounts = useMemo(() => accountsData ?? [], [accountsData])
+  const [accountFilter, setAccountFilter] = useState(ALL_ACCOUNTS)
 
   const isLoading = suggestedLoading || confirmedLoading
   const isError = suggestedError || confirmedError
 
   const sections: TransactionSection[] = [
-    { data: suggestedData ?? [], title: "To confirm", type: "suggested" },
-    { data: confirmedData ?? [], title: "Confirmed", type: "confirmed" },
+    {
+      data: filterTransactionsByAccount(suggestedData ?? [], accountFilter),
+      title: "To confirm",
+      type: "suggested",
+    },
+    {
+      data: filterTransactionsByAccount(confirmedData ?? [], accountFilter),
+      title: "Confirmed",
+      type: "confirmed",
+    },
   ]
 
   const handleRetry = useCallback(async () => {
@@ -153,6 +167,42 @@ export default function TransactionsScreen() {
       <Button className="mt-2" onPress={handleAccounts} variant="outline">
         <Button.Label>Accounts</Button.Label>
       </Button>
+
+      <Text className="mt-4 mb-2 text-muted text-sm">Filter by account</Text>
+      <ScrollView
+        accessibilityRole="radiogroup"
+        contentContainerStyle={{ gap: 8, paddingRight: 16 }}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      >
+        <Chip
+          accessibilityRole="radio"
+          accessibilityState={{ selected: accountFilter === ALL_ACCOUNTS }}
+          onPress={() => setAccountFilter(ALL_ACCOUNTS)}
+          variant={accountFilter === ALL_ACCOUNTS ? "primary" : "soft"}
+        >
+          <Chip.Label>All</Chip.Label>
+        </Chip>
+        <Chip
+          accessibilityRole="radio"
+          accessibilityState={{ selected: accountFilter === NO_ACCOUNT }}
+          onPress={() => setAccountFilter(NO_ACCOUNT)}
+          variant={accountFilter === NO_ACCOUNT ? "primary" : "soft"}
+        >
+          <Chip.Label>No account</Chip.Label>
+        </Chip>
+        {accounts.map((account) => (
+          <Chip
+            accessibilityRole="radio"
+            accessibilityState={{ selected: accountFilter === account.id }}
+            key={account.id}
+            onPress={() => setAccountFilter(account.id)}
+            variant={accountFilter === account.id ? "primary" : "soft"}
+          >
+            <Chip.Label>{account.name}</Chip.Label>
+          </Chip>
+        ))}
+      </ScrollView>
     </View>
   )
 
