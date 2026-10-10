@@ -7,6 +7,7 @@ import {
   listAccounts,
   updateAccount,
 } from "./account-repository"
+import { getAppMeta, setAppMeta } from "./app-meta-repository"
 import { listBudgets, setBudget } from "./budget-repository"
 import type { DateRange } from "./periods"
 import type { TransactionUpdate } from "./repository"
@@ -165,5 +166,25 @@ export function useDeleteAccount() {
       queryClient.invalidateQueries({ queryKey: accountsQueryKey })
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey })
     },
+  })
+}
+
+export const appMetaQueryKey = ["app-meta"] as const
+
+export function useAppMeta(key: string) {
+  return useQuery({
+    queryFn: () => getAppMeta(key),
+    queryKey: [...appMetaQueryKey, key],
+  })
+}
+
+export function useSetAppMeta() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { key: string; value: string }) =>
+      setAppMeta(input.key, input.value),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: appMetaQueryKey }),
   })
 }
