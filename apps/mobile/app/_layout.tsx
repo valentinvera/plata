@@ -1,9 +1,10 @@
 import "@/styles/globals.css"
-import { QueryClientProvider } from "@tanstack/react-query"
+import { focusManager, QueryClientProvider } from "@tanstack/react-query"
 import { router, Stack } from "expo-router"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
 import { HeroUINativeProvider } from "heroui-native"
 import { useEffect } from "react"
+import { AppState, Platform } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
@@ -61,6 +62,20 @@ function ShareIntentHandler() {
 }
 
 export default function Layout() {
+  // Background ingestion writes straight to SQLite, so refetch the cached
+  // queries when the app returns to the foreground.
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      return
+    }
+
+    const subscription = AppState.addEventListener("change", (status) => {
+      focusManager.setFocused(status === "active")
+    })
+
+    return () => subscription.remove()
+  }, [])
+
   return (
     <ShareIntentProvider>
       <QueryClientProvider client={queryClient}>
