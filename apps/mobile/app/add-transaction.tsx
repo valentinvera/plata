@@ -9,17 +9,15 @@ import {
   getCategoryById,
 } from "@/src/features/transactions/categories"
 import { categorize } from "@/src/features/transactions/categorizer"
+import { formatAmount } from "@/src/features/transactions/format"
 import { useCreateTransaction } from "@/src/features/transactions/hooks"
 import { parseTransactionText } from "@/src/features/transactions/parser"
 import type { TransactionState } from "@/src/features/transactions/types"
 
-function formatCents(cents: number): string {
-  return (cents / 100).toFixed(2)
-}
-
 export default function AddTransactionScreen() {
   const [text, setText] = useState("")
   const [categoryOverride, setCategoryOverride] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const createTransaction = useCreateTransaction()
 
   const preview = useMemo(() => {
@@ -44,31 +42,35 @@ export default function AddTransactionScreen() {
         return
       }
 
-      await createTransaction.mutateAsync({
-        amount: preview.amount,
-        categoryId: preview.categoryId,
-        confidence: preview.confidence,
-        currency: preview.currency,
-        kind: preview.kind,
-        merchant: preview.merchant,
-        note: null,
-        occurredAt: preview.occurredAt ?? Date.now(),
-        rawRef: text.trim() || null,
-        source: "manual",
-        state,
-      })
-
-      router.back()
+      setError(null)
+      try {
+        await createTransaction.mutateAsync({
+          amount: preview.amount,
+          categoryId: preview.categoryId,
+          confidence: preview.confidence,
+          currency: preview.currency,
+          kind: preview.kind,
+          merchant: preview.merchant,
+          note: null,
+          occurredAt: preview.occurredAt ?? Date.now(),
+          rawRef: text.trim() || null,
+          source: "manual",
+          state,
+        })
+        router.back()
+      } catch {
+        setError("Could not save the transaction. Please try again.")
+      }
     },
     [createTransaction, preview, text]
   )
 
-  const handleConfirmed = useCallback(() => {
-    handleSave("confirmed").catch(() => undefined)
+  const handleConfirmed = useCallback(async () => {
+    await handleSave("confirmed")
   }, [handleSave])
 
-  const handleSuggested = useCallback(() => {
-    handleSave("suggested").catch(() => undefined)
+  const handleSuggested = useCallback(async () => {
+    await handleSave("suggested")
   }, [handleSave])
 
   return (
@@ -97,7 +99,7 @@ export default function AddTransactionScreen() {
           Amount:{" "}
           {preview.amount === null
             ? "—"
-            : `${preview.currency} ${formatCents(preview.amount)}`}
+            : formatAmount(preview.amount, preview.currency)}
         </Text>
         <Text className="text-foreground">
           Merchant: {preview.merchant ?? "—"}
@@ -128,6 +130,10 @@ export default function AddTransactionScreen() {
           ))}
         </ScrollView>
       </View>
+
+      {error ? (
+        <Text className="mt-4 text-destructive text-sm">{error}</Text>
+      ) : null}
 
       <View className="mt-6 gap-3 pb-4">
         <Button isDisabled={!canSave} onPress={handleConfirmed}>
