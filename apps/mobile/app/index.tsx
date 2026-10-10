@@ -88,26 +88,26 @@ export default function TransactionsScreen() {
         : `${category} · ${amount}`
 
       return (
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => handleOpen(item.id)}
-        >
-          <Card className="mt-3 p-4">
+        <Card className="mt-3 p-4">
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => handleOpen(item.id)}
+          >
             <Text className="font-medium text-foreground">
               {item.merchant ?? "No merchant"}
             </Text>
             <Text className="mt-1 text-muted text-xs">{meta}</Text>
-            {section.type === "suggested" ? (
-              <Button
-                className="mt-3"
-                onPress={() => handleConfirm(item.id)}
-                size="sm"
-              >
-                <Button.Label>Confirm</Button.Label>
-              </Button>
-            ) : null}
-          </Card>
-        </Pressable>
+          </Pressable>
+          {section.type === "suggested" ? (
+            <Button
+              className="mt-3"
+              onPress={() => handleConfirm(item.id)}
+              size="sm"
+            >
+              <Button.Label>Confirm</Button.Label>
+            </Button>
+          ) : null}
+        </Card>
       )
     },
     [accounts, handleConfirm, handleOpen]
