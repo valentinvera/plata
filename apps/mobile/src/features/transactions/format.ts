@@ -37,3 +37,19 @@ export function formatDateRange(range: DateRange): string {
 export function formatAmountInput(cents: number): string {
   return (cents / 100).toFixed(2).replace(".", ",")
 }
+
+const AMOUNT_INPUT_REGEX =
+  /^(?:\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+(?:,\d{1,2})?)$/
+
+export function parseAmountInput(value: string): number | null {
+  const trimmed = value.trim()
+
+  if (!AMOUNT_INPUT_REGEX.test(trimmed)) {
+    return null
+  }
+
+  const normalized = trimmed.replace(/\./g, "").replace(",", ".")
+  const parsed = Number.parseFloat(normalized)
+
+  return Number.isFinite(parsed) ? Math.round(parsed * 100) : null
+}

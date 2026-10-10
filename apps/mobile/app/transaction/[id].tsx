@@ -5,14 +5,16 @@ import { ScrollView, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
 import { DEFAULT_CATEGORIES } from "@/src/features/transactions/categories"
-import { formatAmountInput } from "@/src/features/transactions/format"
+import {
+  formatAmountInput,
+  parseAmountInput,
+} from "@/src/features/transactions/format"
 import {
   useAccounts,
   useDeleteTransaction,
   useTransaction,
   useUpdateTransaction,
 } from "@/src/features/transactions/hooks"
-import { parseAmountToCents } from "@/src/features/transactions/parser"
 import type { Transaction } from "@/src/features/transactions/types"
 
 export default function TransactionDetailScreen() {
@@ -57,7 +59,7 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
   const update = useUpdateTransaction()
   const remove = useDeleteTransaction()
 
-  const amount = parseAmountToCents(amountInput)
+  const amount = parseAmountInput(amountInput)
   const canSave = amount !== null && amount > 0 && !update.isPending
 
   const handleSave = useCallback(async () => {

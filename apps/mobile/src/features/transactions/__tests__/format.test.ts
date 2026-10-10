@@ -1,7 +1,6 @@
 import { describe, expect, it } from "bun:test"
 
-import { formatAmountInput } from "../format"
-import { parseAmountToCents } from "../parser"
+import { formatAmountInput, parseAmountInput } from "../format"
 
 describe("formatAmountInput", () => {
   it("formats cents as an editable es-AR value", () => {
@@ -10,8 +9,30 @@ describe("formatAmountInput", () => {
     expect(formatAmountInput(123_456)).toBe("1234,56")
   })
 
-  it("round-trips through the amount parser", () => {
-    expect(parseAmountToCents(formatAmountInput(123_456))).toBe(123_456)
-    expect(parseAmountToCents(formatAmountInput(999))).toBe(999)
+  it("round-trips through parseAmountInput", () => {
+    expect(parseAmountInput(formatAmountInput(123_456))).toBe(123_456)
+    expect(parseAmountInput(formatAmountInput(999))).toBe(999)
+  })
+})
+
+describe("parseAmountInput", () => {
+  it("parses valid es-AR amounts into cents", () => {
+    expect(parseAmountInput("1500")).toBe(150_000)
+    expect(parseAmountInput("1500,50")).toBe(150_050)
+    expect(parseAmountInput("1500,5")).toBe(150_050)
+    expect(parseAmountInput("1.500")).toBe(150_000)
+    expect(parseAmountInput("1.500,50")).toBe(150_050)
+    expect(parseAmountInput("1.500.000,50")).toBe(150_000_050)
+    expect(parseAmountInput(" 42 ")).toBe(4200)
+  })
+
+  it("rejects malformed input instead of coercing a numeric prefix", () => {
+    expect(parseAmountInput("")).toBeNull()
+    expect(parseAmountInput("abc")).toBeNull()
+    expect(parseAmountInput("12abc34")).toBeNull()
+    expect(parseAmountInput("1,2,3")).toBeNull()
+    expect(parseAmountInput("1.2.3")).toBeNull()
+    expect(parseAmountInput("1,234")).toBeNull()
+    expect(parseAmountInput(",50")).toBeNull()
   })
 })
