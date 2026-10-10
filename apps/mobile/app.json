@@ -53,7 +53,16 @@
         }
       ],
       "expo-sqlite",
-      "expo-updates"
+      "expo-updates",
+      [
+        "expo-share-intent",
+        {
+          "androidIntentFilters": ["text/*"],
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsText": true
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
