@@ -14,14 +14,16 @@ describe("selectTransactionText", () => {
     expect(selectTransactionText(ocr)).toBe("Compraste $12.345,67 en CARREFOUR")
   })
 
-  it("falls back to any line with an amount", () => {
-    const ocr = ["Encabezado", "$12.345,67", "Pie"].join("\n")
+  it("picks the transaction when the label and amount are on separate lines", () => {
+    const ocr = ["Saldo $50.000", "Compraste en CARREFOUR", "$12.345,67"].join(
+      "\n"
+    )
 
-    expect(selectTransactionText(ocr)).toBe("$12.345,67")
+    expect(selectTransactionText(ocr)).toBe("Compraste en CARREFOUR $12.345,67")
   })
 
-  it("falls back to the first non-empty line", () => {
-    expect(selectTransactionText("\n  Hola  \n")).toBe("Hola")
+  it("falls back to the first line when nothing looks like a payment", () => {
+    expect(selectTransactionText("\n  Hola  \n  mundo  \n")).toBe("Hola")
   })
 
   it("returns null for blank text", () => {
