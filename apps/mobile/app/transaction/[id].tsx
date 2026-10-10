@@ -124,12 +124,15 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
       <View className="mt-4">
         <Text className="mb-2 text-muted text-sm">Category</Text>
         <ScrollView
+          accessibilityRole="radiogroup"
           contentContainerStyle={{ gap: 8, paddingRight: 16 }}
           horizontal
           showsHorizontalScrollIndicator={false}
         >
           {DEFAULT_CATEGORIES.map((category) => (
             <Chip
+              accessibilityRole="radio"
+              accessibilityState={{ selected: categoryId === category.id }}
               key={category.id}
               onPress={() => setCategoryId(category.id)}
               variant={categoryId === category.id ? "primary" : "soft"}
@@ -142,9 +145,14 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
 
       <View className="mt-4">
         <Text className="mb-2 text-muted text-sm">Account</Text>
-        <View className="flex-row flex-wrap gap-2">
+        <View
+          accessibilityRole="radiogroup"
+          className="flex-row flex-wrap gap-2"
+        >
           {accounts.map((account) => (
             <Chip
+              accessibilityRole="radio"
+              accessibilityState={{ selected: accountId === account.id }}
               key={account.id}
               onPress={() => setAccountId(account.id)}
               variant={accountId === account.id ? "primary" : "soft"}
