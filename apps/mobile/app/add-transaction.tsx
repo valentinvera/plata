@@ -42,14 +42,21 @@ export default function AddTransactionScreen() {
     }
   }, [categoryOverride, text])
 
+  // Accounts load asynchronously; require a resolved account so a transaction is
+  // never stored without one (e.g. saving right after a share intent cold open).
   const canSave =
     preview.amount !== null &&
     preview.amount > 0 &&
+    selectedAccountId !== null &&
     !createTransaction.isPending
 
   const handleSave = useCallback(
     async (state: TransactionState) => {
-      if (preview.amount === null || preview.amount <= 0) {
+      if (
+        preview.amount === null ||
+        preview.amount <= 0 ||
+        selectedAccountId === null
+      ) {
         return
       }
 
