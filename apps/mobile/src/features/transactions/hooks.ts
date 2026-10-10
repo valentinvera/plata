@@ -3,7 +3,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { DateRange } from "./periods"
 import {
   createTransaction,
+  createTransactions,
   listTransactions,
+  listTransactionsByState,
   listTransactionsInRange,
   updateTransactionState,
 } from "./repository"
@@ -15,6 +17,20 @@ export function useTransactions() {
   return useQuery({
     queryFn: () => listTransactions(),
     queryKey: transactionsQueryKey,
+  })
+}
+
+export function useSuggestedTransactions() {
+  return useQuery({
+    queryFn: () => listTransactionsByState("suggested"),
+    queryKey: [...transactionsQueryKey, "state", "suggested"],
+  })
+}
+
+export function useConfirmedTransactions() {
+  return useQuery({
+    queryFn: () => listTransactionsByState("confirmed"),
+    queryKey: [...transactionsQueryKey, "state", "confirmed"],
   })
 }
 
@@ -30,6 +46,16 @@ export function useCreateTransaction() {
 
   return useMutation({
     mutationFn: (input: NewTransaction) => createTransaction(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
+  })
+}
+
+export function useCreateTransactions() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (inputs: NewTransaction[]) => createTransactions(inputs),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
   })

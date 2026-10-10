@@ -16,6 +16,7 @@ function StackLayout() {
         options={{ presentation: "modal", title: "Add transaction" }}
       />
       <Stack.Screen name="week" options={{ title: "This week" }} />
+      <Stack.Screen name="catch-up" options={{ title: "Catch up" }} />
       <Stack.Screen
         name="modal"
         options={{ presentation: "modal", title: "Modal" }}
