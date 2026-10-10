@@ -1,8 +1,11 @@
 import { describe, expect, it } from "bun:test"
 
 import {
+  ALL_ACCOUNTS,
+  accountFilterClause,
   DEFAULT_ACCOUNTS,
   getAccountName,
+  NO_ACCOUNT,
   validateAccountName,
 } from "../accounts"
 
@@ -37,5 +40,28 @@ describe("validateAccountName", () => {
   it("accepts a new name and ignores the account being renamed", () => {
     expect(validateAccountName("Banco", accounts)).toBeNull()
     expect(validateAccountName("Efectivo", accounts, "cash")).toBeNull()
+  })
+})
+
+describe("accountFilterClause", () => {
+  it("adds no condition for the all filter", () => {
+    expect(accountFilterClause(ALL_ACCOUNTS)).toEqual({
+      clause: "",
+      params: [],
+    })
+  })
+
+  it("matches rows without an account", () => {
+    expect(accountFilterClause(NO_ACCOUNT)).toEqual({
+      clause: " AND account_id IS NULL",
+      params: [],
+    })
+  })
+
+  it("binds the account id for a specific account", () => {
+    expect(accountFilterClause("cash")).toEqual({
+      clause: " AND account_id = ?",
+      params: ["cash"],
+    })
   })
 })

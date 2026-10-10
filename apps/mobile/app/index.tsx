@@ -1,10 +1,14 @@
 import { router } from "expo-router"
-import { Button, Card, Spinner } from "heroui-native"
-import { useCallback, useMemo } from "react"
-import { Pressable, SectionList, Text, View } from "react-native"
+import { Button, Card, Chip, Spinner } from "heroui-native"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { Pressable, ScrollView, SectionList, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
-import { getAccountName } from "@/src/features/transactions/accounts"
+import {
+  ALL_ACCOUNTS,
+  getAccountName,
+  NO_ACCOUNT,
+} from "@/src/features/transactions/accounts"
 import { getCategoryById } from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
 import {
@@ -22,30 +26,46 @@ interface TransactionSection {
 }
 
 export default function TransactionsScreen() {
+  const [accountFilter, setAccountFilter] = useState(ALL_ACCOUNTS)
+
   const {
     data: suggestedData,
     isError: suggestedError,
     isLoading: suggestedLoading,
     refetch: refetchSuggested,
-  } = useSuggestedTransactions()
+  } = useSuggestedTransactions(accountFilter)
   const {
     data: confirmedData,
     isError: confirmedError,
     isLoading: confirmedLoading,
     refetch: refetchConfirmed,
-  } = useConfirmedTransactions()
+  } = useConfirmedTransactions(accountFilter)
   const updateState = useUpdateTransactionState()
   const { data: accountsData } = useAccounts()
 
   const accounts = useMemo(() => accountsData ?? [], [accountsData])
 
+  // If the filtered account is deleted elsewhere, fall back to showing everything.
+  useEffect(() => {
+    if (!accountsData) {
+      return
+    }
+    if (accountFilter === ALL_ACCOUNTS || accountFilter === NO_ACCOUNT) {
+      return
+    }
+    if (!accountsData.some((account) => account.id === accountFilter)) {
+      setAccountFilter(ALL_ACCOUNTS)
+    }
+  }, [accountFilter, accountsData])
+
   const isLoading = suggestedLoading || confirmedLoading
   const isError = suggestedError || confirmedError
 
-  const sections: TransactionSection[] = [
+  const allSections: TransactionSection[] = [
     { data: suggestedData ?? [], title: "To confirm", type: "suggested" },
     { data: confirmedData ?? [], title: "Confirmed", type: "confirmed" },
   ]
+  const sections = allSections.filter((section) => section.data.length > 0)
 
   const handleRetry = useCallback(async () => {
     await Promise.all([refetchSuggested(), refetchConfirmed()])
@@ -118,17 +138,11 @@ export default function TransactionsScreen() {
   )
 
   const renderSectionHeader = useCallback(
-    ({ section }: { section: TransactionSection }) => {
-      if (section.data.length === 0) {
-        return null
-      }
-
-      return (
-        <Text className="mt-6 font-semibold text-foreground">
-          {section.title}
-        </Text>
-      )
-    },
+    ({ section }: { section: TransactionSection }) => (
+      <Text className="mt-6 font-semibold text-foreground">
+        {section.title}
+      </Text>
+    ),
     []
   )
 
@@ -153,6 +167,42 @@ export default function TransactionsScreen() {
       <Button className="mt-2" onPress={handleAccounts} variant="outline">
         <Button.Label>Accounts</Button.Label>
       </Button>
+
+      <Text className="mt-4 mb-2 text-muted text-sm">Filter by account</Text>
+      <ScrollView
+        accessibilityRole="radiogroup"
+        contentContainerStyle={{ gap: 8, paddingRight: 16 }}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+      >
+        <Chip
+          accessibilityRole="radio"
+          accessibilityState={{ selected: accountFilter === ALL_ACCOUNTS }}
+          onPress={() => setAccountFilter(ALL_ACCOUNTS)}
+          variant={accountFilter === ALL_ACCOUNTS ? "primary" : "soft"}
+        >
+          <Chip.Label>All</Chip.Label>
+        </Chip>
+        <Chip
+          accessibilityRole="radio"
+          accessibilityState={{ selected: accountFilter === NO_ACCOUNT }}
+          onPress={() => setAccountFilter(NO_ACCOUNT)}
+          variant={accountFilter === NO_ACCOUNT ? "primary" : "soft"}
+        >
+          <Chip.Label>No account</Chip.Label>
+        </Chip>
+        {accounts.map((account) => (
+          <Chip
+            accessibilityRole="radio"
+            accessibilityState={{ selected: accountFilter === account.id }}
+            key={account.id}
+            onPress={() => setAccountFilter(account.id)}
+            variant={accountFilter === account.id ? "primary" : "soft"}
+          >
+            <Chip.Label>{account.name}</Chip.Label>
+          </Chip>
+        ))}
+      </ScrollView>
     </View>
   )
 
@@ -181,7 +231,9 @@ export default function TransactionsScreen() {
           keyExtractor={keyExtractor}
           ListEmptyComponent={
             <Text className="mt-4 text-muted text-sm">
-              No transactions yet.
+              {accountFilter === ALL_ACCOUNTS
+                ? "No transactions yet."
+                : "No transactions for this filter."}
             </Text>
           }
           ListHeaderComponent={header}

@@ -32,17 +32,17 @@ export function useTransactions() {
   })
 }
 
-export function useSuggestedTransactions() {
+export function useSuggestedTransactions(accountFilter: string) {
   return useQuery({
-    queryFn: () => listTransactionsByState("suggested"),
-    queryKey: [...transactionsQueryKey, "state", "suggested"],
+    queryFn: () => listTransactionsByState("suggested", accountFilter),
+    queryKey: [...transactionsQueryKey, "state", "suggested", accountFilter],
   })
 }
 
-export function useConfirmedTransactions() {
+export function useConfirmedTransactions(accountFilter: string) {
   return useQuery({
-    queryFn: () => listTransactionsByState("confirmed"),
-    queryKey: [...transactionsQueryKey, "state", "confirmed"],
+    queryFn: () => listTransactionsByState("confirmed", accountFilter),
+    queryKey: [...transactionsQueryKey, "state", "confirmed", accountFilter],
   })
 }
 

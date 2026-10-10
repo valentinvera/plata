@@ -1,5 +1,6 @@
 import type { SQLiteDatabase } from "expo-sqlite"
 
+import { ALL_ACCOUNTS, accountFilterClause } from "./accounts"
 import { getDatabase } from "./db"
 import { createId } from "./id"
 import { rowToTransaction, type TransactionRow } from "./row"
@@ -125,12 +126,15 @@ export async function listTransactionsInRange(
 
 export async function listTransactionsByState(
   state: TransactionState,
+  accountFilter: string = ALL_ACCOUNTS,
   limit = TRANSACTIONS_PAGE_SIZE
 ): Promise<Transaction[]> {
   const database = await getDatabase()
+  const { clause, params } = accountFilterClause(accountFilter)
   const rows = await database.getAllAsync<TransactionRow>(
-    `SELECT ${COLUMNS} FROM transactions WHERE state = ? ORDER BY occurred_at DESC LIMIT ?`,
+    `SELECT ${COLUMNS} FROM transactions WHERE state = ?${clause} ORDER BY occurred_at DESC LIMIT ?`,
     state,
+    ...params,
     limit
   )
 

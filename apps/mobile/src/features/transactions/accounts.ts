@@ -62,3 +62,23 @@ export function validateAccountName(
 
   return duplicate ? "An account with that name already exists" : null
 }
+
+export const ALL_ACCOUNTS = "all"
+export const NO_ACCOUNT = "none"
+
+export interface AccountFilterClause {
+  clause: string
+  params: string[]
+}
+
+export function accountFilterClause(filter: string): AccountFilterClause {
+  if (filter === ALL_ACCOUNTS) {
+    return { clause: "", params: [] }
+  }
+
+  if (filter === NO_ACCOUNT) {
+    return { clause: " AND account_id IS NULL", params: [] }
+  }
+
+  return { clause: " AND account_id = ?", params: [filter] }
+}
