@@ -44,6 +44,10 @@ export default function TransactionsScreen() {
     router.push("/add-transaction")
   }, [])
 
+  const handleWeek = useCallback(() => {
+    router.push("/week")
+  }, [])
+
   const handleConfirm = useCallback(
     (id: string) => {
       updateState.mutate({ id, state: "confirmed" })
@@ -102,6 +106,9 @@ export default function TransactionsScreen() {
       <Text className="mt-1 text-muted text-sm">Your transactions</Text>
       <Button className="mt-4" onPress={handleAdd}>
         <Button.Label>Add transaction</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handleWeek} variant="outline">
+        <Button.Label>This week</Button.Label>
       </Button>
     </View>
   )

@@ -63,6 +63,20 @@ export async function listTransactions(
   return rows.map(rowToTransaction)
 }
 
+export async function listTransactionsInRange(
+  start: number,
+  end: number
+): Promise<Transaction[]> {
+  const database = await getDatabase()
+  const rows = await database.getAllAsync<TransactionRow>(
+    `SELECT ${COLUMNS} FROM transactions WHERE occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at DESC`,
+    start,
+    end
+  )
+
+  return rows.map(rowToTransaction)
+}
+
 export async function updateTransactionState(
   id: string,
   state: TransactionState
