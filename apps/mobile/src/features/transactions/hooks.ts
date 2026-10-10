@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import type { DateRange } from "./periods"
 import {
   createTransaction,
+  createTransactions,
   listTransactions,
   listTransactionsInRange,
   updateTransactionState,
@@ -30,6 +31,16 @@ export function useCreateTransaction() {
 
   return useMutation({
     mutationFn: (input: NewTransaction) => createTransaction(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
+  })
+}
+
+export function useCreateTransactions() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (inputs: NewTransaction[]) => createTransactions(inputs),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
   })

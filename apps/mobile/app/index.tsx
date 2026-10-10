@@ -48,6 +48,10 @@ export default function TransactionsScreen() {
     router.push("/week")
   }, [])
 
+  const handleCatchUp = useCallback(() => {
+    router.push("/catch-up")
+  }, [])
+
   const handleConfirm = useCallback(
     (id: string) => {
       updateState.mutate({ id, state: "confirmed" })
@@ -109,6 +113,9 @@ export default function TransactionsScreen() {
       </Button>
       <Button className="mt-2" onPress={handleWeek} variant="outline">
         <Button.Label>This week</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handleCatchUp} variant="outline">
+        <Button.Label>Catch up</Button.Label>
       </Button>
     </View>
   )
