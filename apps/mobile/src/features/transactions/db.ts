@@ -28,13 +28,19 @@ CREATE INDEX IF NOT EXISTS idx_transactions_state ON transactions (state);
 
 let databasePromise: Promise<SQLiteDatabase> | null = null
 
+async function initializeDatabase(): Promise<SQLiteDatabase> {
+  const database = await openDatabaseAsync(DATABASE_NAME)
+  await database.execAsync(SCHEMA)
+  return database
+}
+
 export function getDatabase(): Promise<SQLiteDatabase> {
   if (!databasePromise) {
-    databasePromise = (async () => {
-      const database = await openDatabaseAsync(DATABASE_NAME)
-      await database.execAsync(SCHEMA)
-      return database
-    })()
+    databasePromise = initializeDatabase().catch((error: unknown) => {
+      // Don't cache a rejected promise: allow a later call to retry initialization.
+      databasePromise = null
+      throw error
+    })
   }
 
   return databasePromise

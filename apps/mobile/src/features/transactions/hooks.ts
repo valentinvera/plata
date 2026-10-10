@@ -11,7 +11,7 @@ export const transactionsQueryKey = ["transactions"] as const
 
 export function useTransactions() {
   return useQuery({
-    queryFn: listTransactions,
+    queryFn: () => listTransactions(),
     queryKey: transactionsQueryKey,
   })
 }

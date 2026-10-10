@@ -6,6 +6,8 @@ import type { NewTransaction, Transaction, TransactionState } from "./types"
 const COLUMNS =
   "id, amount, category_id, confidence, created_at, currency, kind, merchant, note, occurred_at, raw_ref, source, state, updated_at"
 
+export const TRANSACTIONS_PAGE_SIZE = 100
+
 export async function createTransaction(
   input: NewTransaction
 ): Promise<Transaction> {
@@ -49,10 +51,13 @@ export async function createTransaction(
   return transaction
 }
 
-export async function listTransactions(): Promise<Transaction[]> {
+export async function listTransactions(
+  limit = TRANSACTIONS_PAGE_SIZE
+): Promise<Transaction[]> {
   const database = await getDatabase()
   const rows = await database.getAllAsync<TransactionRow>(
-    `SELECT ${COLUMNS} FROM transactions ORDER BY occurred_at DESC`
+    `SELECT ${COLUMNS} FROM transactions ORDER BY occurred_at DESC LIMIT ?`,
+    limit
   )
 
   return rows.map(rowToTransaction)
