@@ -1,5 +1,6 @@
 import type { Account, AccountKind } from "./accounts"
 import { getDatabase } from "./db"
+import { createId } from "./id"
 
 interface AccountRow {
   created_at: number
@@ -26,4 +27,71 @@ export async function listAccounts(): Promise<Account[]> {
   )
 
   return rows.map(rowToAccount)
+}
+
+export interface AccountInput {
+  kind: AccountKind
+  name: string
+}
+
+export async function createAccount(input: AccountInput): Promise<Account> {
+  const database = await getDatabase()
+  const account: Account = {
+    createdAt: Date.now(),
+    id: createId(),
+    kind: input.kind,
+    name: input.name.trim(),
+  }
+
+  await database.runAsync(
+    "INSERT INTO accounts (id, name, kind, created_at) VALUES (?, ?, ?, ?)",
+    account.id,
+    account.name,
+    account.kind,
+    account.createdAt
+  )
+
+  return account
+}
+
+export async function updateAccount(
+  id: string,
+  update: Partial<AccountInput>
+): Promise<void> {
+  const assignments: string[] = []
+  const values: (number | string)[] = []
+
+  if (update.name !== undefined) {
+    assignments.push("name = ?")
+    values.push(update.name.trim())
+  }
+
+  if (update.kind !== undefined) {
+    assignments.push("kind = ?")
+    values.push(update.kind)
+  }
+
+  if (assignments.length === 0) {
+    return
+  }
+
+  values.push(id)
+
+  const database = await getDatabase()
+  await database.runAsync(
+    `UPDATE accounts SET ${assignments.join(", ")} WHERE id = ?`,
+    ...values
+  )
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  const database = await getDatabase()
+
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "UPDATE transactions SET account_id = NULL WHERE account_id = ?",
+      id
+    )
+    await database.runAsync("DELETE FROM accounts WHERE id = ?", id)
+  })
 }

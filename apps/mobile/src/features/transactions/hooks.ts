@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
-import { listAccounts } from "./account-repository"
+import {
+  type AccountInput,
+  createAccount,
+  deleteAccount,
+  listAccounts,
+  updateAccount,
+} from "./account-repository"
 import { listBudgets, setBudget } from "./budget-repository"
 import type { DateRange } from "./periods"
 import type { TransactionUpdate } from "./repository"
@@ -127,4 +133,37 @@ export const accountsQueryKey = ["accounts"] as const
 
 export function useAccounts() {
   return useQuery({ queryFn: listAccounts, queryKey: accountsQueryKey })
+}
+
+export function useCreateAccount() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: AccountInput) => createAccount(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: accountsQueryKey }),
+  })
+}
+
+export function useUpdateAccount() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { id: string; update: Partial<AccountInput> }) =>
+      updateAccount(input.id, input.update),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: accountsQueryKey }),
+  })
+}
+
+export function useDeleteAccount() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => deleteAccount(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: accountsQueryKey })
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey })
+    },
+  })
 }

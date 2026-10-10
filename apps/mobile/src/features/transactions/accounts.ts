@@ -29,3 +29,36 @@ export function getAccountName(
 
   return accounts.find((account) => account.id === accountId)?.name ?? null
 }
+
+export const ACCOUNT_KINDS: readonly AccountKind[] = [
+  "cash",
+  "card",
+  "transfer",
+]
+
+export const ACCOUNT_KIND_LABELS: Record<AccountKind, string> = {
+  card: "Tarjeta",
+  cash: "Efectivo",
+  transfer: "Transferencia",
+}
+
+export function validateAccountName(
+  name: string,
+  accounts: readonly Account[],
+  currentId?: string
+): string | null {
+  const trimmed = name.trim()
+
+  if (trimmed.length === 0) {
+    return "Enter a name"
+  }
+
+  const normalized = trimmed.toLowerCase()
+  const duplicate = accounts.some(
+    (account) =>
+      account.id !== currentId &&
+      account.name.trim().toLowerCase() === normalized
+  )
+
+  return duplicate ? "An account with that name already exists" : null
+}
