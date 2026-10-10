@@ -12,6 +12,20 @@ const INSERT_SQL = `INSERT INTO transactions (${COLUMNS}) VALUES (?, ?, ?, ?, ?,
 
 export const TRANSACTIONS_PAGE_SIZE = 100
 
+export interface TransactionUpdate {
+  accountId?: string | null
+  amount?: number
+  categoryId?: string
+  merchant?: string | null
+}
+
+const UPDATE_COLUMNS: readonly [keyof TransactionUpdate, string][] = [
+  ["accountId", "account_id"],
+  ["amount", "amount"],
+  ["categoryId", "category_id"],
+  ["merchant", "merchant"],
+]
+
 function buildTransaction(input: NewTransaction, now: number): Transaction {
   return {
     accountId: input.accountId,
@@ -123,6 +137,16 @@ export async function listTransactionsByState(
   return rows.map(rowToTransaction)
 }
 
+export async function getTransaction(id: string): Promise<Transaction | null> {
+  const database = await getDatabase()
+  const row = await database.getFirstAsync<TransactionRow>(
+    `SELECT ${COLUMNS} FROM transactions WHERE id = ?`,
+    id
+  )
+
+  return row ? rowToTransaction(row) : null
+}
+
 export async function updateTransactionState(
   id: string,
   state: TransactionState
@@ -133,6 +157,36 @@ export async function updateTransactionState(
     state,
     Date.now(),
     id
+  )
+}
+
+export async function updateTransaction(
+  id: string,
+  update: TransactionUpdate
+): Promise<void> {
+  const assignments: string[] = []
+  const values: (number | string | null)[] = []
+
+  for (const [key, column] of UPDATE_COLUMNS) {
+    const value = update[key]
+
+    if (value !== undefined) {
+      assignments.push(`${column} = ?`)
+      values.push(value)
+    }
+  }
+
+  if (assignments.length === 0) {
+    return
+  }
+
+  assignments.push("updated_at = ?")
+  values.push(Date.now(), id)
+
+  const database = await getDatabase()
+  await database.runAsync(
+    `UPDATE transactions SET ${assignments.join(", ")} WHERE id = ?`,
+    ...values
   )
 }
 

@@ -3,12 +3,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { listAccounts } from "./account-repository"
 import { listBudgets, setBudget } from "./budget-repository"
 import type { DateRange } from "./periods"
+import type { TransactionUpdate } from "./repository"
 import {
   createTransaction,
   createTransactions,
+  deleteTransaction,
+  getTransaction,
   listTransactions,
   listTransactionsByState,
   listTransactionsInRange,
+  updateTransaction,
   updateTransactionState,
 } from "./repository"
 import type { NewTransaction, TransactionState } from "./types"
@@ -69,6 +73,34 @@ export function useUpdateTransactionState() {
   return useMutation({
     mutationFn: (input: { id: string; state: TransactionState }) =>
       updateTransactionState(input.id, input.state),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
+  })
+}
+
+export function useTransaction(id: string) {
+  return useQuery({
+    queryFn: () => getTransaction(id),
+    queryKey: [...transactionsQueryKey, "id", id],
+  })
+}
+
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { id: string; update: TransactionUpdate }) =>
+      updateTransaction(input.id, input.update),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
+  })
+}
+
+export function useDeleteTransaction() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => deleteTransaction(id),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
   })
