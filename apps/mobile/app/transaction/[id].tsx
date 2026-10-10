@@ -4,7 +4,10 @@ import { useCallback, useState } from "react"
 import { ScrollView, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
-import { DEFAULT_CATEGORIES } from "@/src/features/transactions/categories"
+import {
+  DEFAULT_CATEGORIES,
+  UNCATEGORIZED_CATEGORY,
+} from "@/src/features/transactions/categories"
 import {
   formatAmountInput,
   parseAmountInput,
@@ -16,6 +19,8 @@ import {
   useUpdateTransaction,
 } from "@/src/features/transactions/hooks"
 import type { Transaction } from "@/src/features/transactions/types"
+
+const CATEGORY_OPTIONS = [...DEFAULT_CATEGORIES, UNCATEGORIZED_CATEGORY]
 
 export default function TransactionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>()
@@ -130,7 +135,7 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
           horizontal
           showsHorizontalScrollIndicator={false}
         >
-          {DEFAULT_CATEGORIES.map((category) => (
+          {CATEGORY_OPTIONS.map((category) => (
             <Chip
               accessibilityRole="radio"
               accessibilityState={{ selected: categoryId === category.id }}
@@ -150,6 +155,14 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
           accessibilityRole="radiogroup"
           className="flex-row flex-wrap gap-2"
         >
+          <Chip
+            accessibilityRole="radio"
+            accessibilityState={{ selected: accountId === null }}
+            onPress={() => setAccountId(null)}
+            variant={accountId === null ? "primary" : "soft"}
+          >
+            <Chip.Label>No account</Chip.Label>
+          </Chip>
           {accounts.map((account) => (
             <Chip
               accessibilityRole="radio"
