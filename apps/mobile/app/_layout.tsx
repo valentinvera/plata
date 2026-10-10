@@ -31,6 +31,7 @@ function StackLayout() {
         name="notifications"
         options={{ title: "Automatic import" }}
       />
+      <Stack.Screen name="onboarding" options={{ headerShown: false }} />
       <Stack.Screen
         name="transaction/[id]"
         options={{ title: "Transaction" }}

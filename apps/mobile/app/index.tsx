@@ -1,4 +1,4 @@
-import { router } from "expo-router"
+import { Redirect, router } from "expo-router"
 import { Button, Card, Chip, Spinner } from "heroui-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
@@ -20,10 +20,15 @@ import { getCategoryById } from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
 import {
   useAccounts,
+  useAppMeta,
   useConfirmedTransactions,
   useSuggestedTransactions,
   useUpdateTransactionState,
 } from "@/src/features/transactions/hooks"
+import {
+  ONBOARDING_COMPLETED_KEY,
+  shouldShowOnboarding,
+} from "@/src/features/transactions/onboarding"
 import type { Transaction } from "@/src/features/transactions/types"
 
 interface TransactionSection {
@@ -51,6 +56,9 @@ export default function TransactionsScreen() {
   const { data: accountsData } = useAccounts()
 
   const accounts = useMemo(() => accountsData ?? [], [accountsData])
+  const { data: onboardingValue, isLoading: onboardingLoading } = useAppMeta(
+    ONBOARDING_COMPLETED_KEY
+  )
 
   // If the filtered account is deleted elsewhere, fall back to showing everything.
   useEffect(() => {
@@ -225,6 +233,20 @@ export default function TransactionsScreen() {
       </ScrollView>
     </View>
   )
+
+  if (onboardingLoading) {
+    return (
+      <Container className="px-5">
+        <View className="items-center py-8">
+          <Spinner />
+        </View>
+      </Container>
+    )
+  }
+
+  if (shouldShowOnboarding(onboardingValue ?? null)) {
+    return <Redirect href="/onboarding" />
+  }
 
   return (
     <Container className="px-5" isScrollable={false}>
