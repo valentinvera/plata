@@ -169,10 +169,15 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
             <Text className="text-destructive text-sm">
               Delete this transaction? This cannot be undone.
             </Text>
-            <Button onPress={handleDelete} variant="outline">
+            <Button
+              isDisabled={remove.isPending}
+              onPress={handleDelete}
+              variant="outline"
+            >
               <Button.Label>Yes, delete</Button.Label>
             </Button>
             <Button
+              isDisabled={remove.isPending}
               onPress={() => setConfirmingDelete(false)}
               variant="outline"
             >
