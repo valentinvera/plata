@@ -1,6 +1,10 @@
+import {
+  getPendingResultAsync,
+  launchImageLibraryAsync,
+} from "expo-image-picker"
 import { router, useLocalSearchParams } from "expo-router"
 import { Button, Card, Chip, Input, Label, TextField } from "heroui-native"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { ScrollView, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
@@ -14,6 +18,7 @@ import {
   useAccounts,
   useCreateTransaction,
 } from "@/src/features/transactions/hooks"
+import { recognizeTransactionText } from "@/src/features/transactions/ocr-recognize"
 import { parseTransactionText } from "@/src/features/transactions/parser"
 import type { TransactionState } from "@/src/features/transactions/types"
 
@@ -25,6 +30,7 @@ export default function AddTransactionScreen() {
   const [categoryOverride, setCategoryOverride] = useState<string | null>(null)
   const [accountId, setAccountId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isImporting, setIsImporting] = useState(false)
   const createTransaction = useCreateTransaction()
   const { data: accountsData } = useAccounts()
 
@@ -92,6 +98,51 @@ export default function AddTransactionScreen() {
     await handleSave("suggested")
   }, [handleSave])
 
+  const processImage = useCallback(async (uri: string) => {
+    setIsImporting(true)
+    try {
+      const recognized = await recognizeTransactionText(uri)
+
+      if (recognized) {
+        setText(recognized)
+      } else {
+        setError("We could not read any text from that image.")
+      }
+    } catch {
+      setError("We could not read that image. Please try again.")
+    } finally {
+      setIsImporting(false)
+    }
+  }, [])
+
+  const handleImportScreenshot = useCallback(async () => {
+    setError(null)
+
+    const result = await launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 1,
+    })
+
+    const uri = result.canceled ? null : result.assets[0]?.uri
+
+    if (uri) {
+      await processImage(uri)
+    }
+  }, [processImage])
+
+  // Android can recreate the activity while the picker is open; recover the
+  // selected image from the pending result when the screen mounts again.
+  useEffect(() => {
+    getPendingResultAsync()
+      .then((pending) => {
+        if (pending && "canceled" in pending && !pending.canceled) {
+          const uri = pending.assets[0]?.uri
+          return uri ? processImage(uri) : undefined
+        }
+      })
+      .catch(() => undefined)
+  }, [processImage])
+
   return (
     <Container className="px-5">
       <Text className="pt-3 pb-2 font-bold text-2xl text-foreground">
@@ -111,6 +162,17 @@ export default function AddTransactionScreen() {
           value={text}
         />
       </TextField>
+
+      <Button
+        className="mt-2"
+        isDisabled={isImporting}
+        onPress={handleImportScreenshot}
+        variant="outline"
+      >
+        <Button.Label>
+          {isImporting ? "Reading screenshot…" : "Import screenshot"}
+        </Button.Label>
+      </Button>
 
       <Card className="mt-4 p-4">
         <Text className="font-semibold text-foreground">Preview</Text>

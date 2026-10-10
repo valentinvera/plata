@@ -62,6 +62,13 @@
             "NSExtensionActivationSupportsText": true
           }
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "microphonePermission": false,
+          "photosPermission": "Plata reads the screenshot you pick to import the transaction."
+        }
       ]
     ],
     "experiments": {
