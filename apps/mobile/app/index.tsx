@@ -1,7 +1,7 @@
 import { router } from "expo-router"
 import { Button, Card, Spinner } from "heroui-native"
 import { useCallback, useMemo } from "react"
-import { SectionList, Text, View } from "react-native"
+import { Pressable, SectionList, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
 import { getAccountName } from "@/src/features/transactions/accounts"
@@ -74,6 +74,10 @@ export default function TransactionsScreen() {
     [updateState]
   )
 
+  const handleOpen = useCallback((id: string) => {
+    router.push({ pathname: "/transaction/[id]", params: { id } })
+  }, [])
+
   const renderItem = useCallback(
     ({ item, section }: { item: Transaction; section: TransactionSection }) => {
       const category = getCategoryById(item.categoryId).name
@@ -84,24 +88,29 @@ export default function TransactionsScreen() {
         : `${category} · ${amount}`
 
       return (
-        <Card className="mt-3 p-4">
-          <Text className="font-medium text-foreground">
-            {item.merchant ?? "No merchant"}
-          </Text>
-          <Text className="mt-1 text-muted text-xs">{meta}</Text>
-          {section.type === "suggested" ? (
-            <Button
-              className="mt-3"
-              onPress={() => handleConfirm(item.id)}
-              size="sm"
-            >
-              <Button.Label>Confirm</Button.Label>
-            </Button>
-          ) : null}
-        </Card>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => handleOpen(item.id)}
+        >
+          <Card className="mt-3 p-4">
+            <Text className="font-medium text-foreground">
+              {item.merchant ?? "No merchant"}
+            </Text>
+            <Text className="mt-1 text-muted text-xs">{meta}</Text>
+            {section.type === "suggested" ? (
+              <Button
+                className="mt-3"
+                onPress={() => handleConfirm(item.id)}
+                size="sm"
+              >
+                <Button.Label>Confirm</Button.Label>
+              </Button>
+            ) : null}
+          </Card>
+        </Pressable>
       )
     },
-    [accounts, handleConfirm]
+    [accounts, handleConfirm, handleOpen]
   )
 
   const renderSectionHeader = useCallback(

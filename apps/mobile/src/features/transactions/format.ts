@@ -33,3 +33,7 @@ export function formatDay(timestamp: number): string {
 export function formatDateRange(range: DateRange): string {
   return `${formatDay(range.start)} – ${formatDay(range.end - 1)}`
 }
+
+export function formatAmountInput(cents: number): string {
+  return (cents / 100).toFixed(2).replace(".", ",")
+}

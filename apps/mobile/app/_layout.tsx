@@ -22,6 +22,10 @@ function StackLayout() {
       <Stack.Screen name="catch-up" options={{ title: "Catch up" }} />
       <Stack.Screen name="budgets" options={{ title: "Budgets" }} />
       <Stack.Screen
+        name="transaction/[id]"
+        options={{ title: "Transaction" }}
+      />
+      <Stack.Screen
         name="modal"
         options={{ presentation: "modal", title: "Modal" }}
       />
