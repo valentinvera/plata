@@ -24,6 +24,12 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 CREATE INDEX IF NOT EXISTS idx_transactions_occurred_at ON transactions (occurred_at);
 CREATE INDEX IF NOT EXISTS idx_transactions_state ON transactions (state);
+
+CREATE TABLE IF NOT EXISTS budgets (
+  category_id TEXT PRIMARY KEY NOT NULL,
+  amount INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `
 
 let databasePromise: Promise<SQLiteDatabase> | null = null
