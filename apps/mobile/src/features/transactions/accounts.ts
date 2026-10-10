@@ -66,16 +66,19 @@ export function validateAccountName(
 export const ALL_ACCOUNTS = "all"
 export const NO_ACCOUNT = "none"
 
-export function filterTransactionsByAccount<
-  T extends { accountId: string | null },
->(transactions: readonly T[], filter: string): T[] {
+export interface AccountFilterClause {
+  clause: string
+  params: string[]
+}
+
+export function accountFilterClause(filter: string): AccountFilterClause {
   if (filter === ALL_ACCOUNTS) {
-    return [...transactions]
+    return { clause: "", params: [] }
   }
 
   if (filter === NO_ACCOUNT) {
-    return transactions.filter((transaction) => transaction.accountId === null)
+    return { clause: " AND account_id IS NULL", params: [] }
   }
 
-  return transactions.filter((transaction) => transaction.accountId === filter)
+  return { clause: " AND account_id = ?", params: [filter] }
 }

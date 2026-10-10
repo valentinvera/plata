@@ -2,8 +2,8 @@ import { describe, expect, it } from "bun:test"
 
 import {
   ALL_ACCOUNTS,
+  accountFilterClause,
   DEFAULT_ACCOUNTS,
-  filterTransactionsByAccount,
   getAccountName,
   NO_ACCOUNT,
   validateAccountName,
@@ -43,30 +43,25 @@ describe("validateAccountName", () => {
   })
 })
 
-describe("filterTransactionsByAccount", () => {
-  const transactions = [
-    { accountId: "cash", id: "1" },
-    { accountId: null, id: "2" },
-    { accountId: "card", id: "3" },
-  ]
-
-  const ids = (filter: string) =>
-    filterTransactionsByAccount(transactions, filter).map((item) => item.id)
-
-  it("returns every transaction for the all filter", () => {
-    expect(ids(ALL_ACCOUNTS)).toEqual(["1", "2", "3"])
+describe("accountFilterClause", () => {
+  it("adds no condition for the all filter", () => {
+    expect(accountFilterClause(ALL_ACCOUNTS)).toEqual({
+      clause: "",
+      params: [],
+    })
   })
 
-  it("keeps only the selected account", () => {
-    expect(ids("cash")).toEqual(["1"])
-    expect(ids("card")).toEqual(["3"])
+  it("matches rows without an account", () => {
+    expect(accountFilterClause(NO_ACCOUNT)).toEqual({
+      clause: " AND account_id IS NULL",
+      params: [],
+    })
   })
 
-  it("keeps only transactions without an account", () => {
-    expect(ids(NO_ACCOUNT)).toEqual(["2"])
-  })
-
-  it("returns nothing for an unknown account", () => {
-    expect(ids("unknown")).toEqual([])
+  it("binds the account id for a specific account", () => {
+    expect(accountFilterClause("cash")).toEqual({
+      clause: " AND account_id = ?",
+      params: ["cash"],
+    })
   })
 })
