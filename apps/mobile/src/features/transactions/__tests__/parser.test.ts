@@ -51,4 +51,31 @@ describe("parseTransactionText", () => {
     expect(parsed.merchant).toBeNull()
     expect(parsed.occurredAt).toBeNull()
   })
+
+  it("isolates the amount token from the rest of the text", () => {
+    expect(parseTransactionText("Compraste $500 el 05/09").amount).toBe(50_000)
+    expect(parseTransactionText("$12.345 el 05/09").amount).toBe(1_234_500)
+  })
+
+  it("rejects dates that overflow into another day", () => {
+    expect(
+      parseTransactionText("Pago $500 el 31/02/2026", 0).occurredAt
+    ).toBeNull()
+  })
+
+  it("does not treat longer words as income keywords", () => {
+    const parsed = parseTransactionText(
+      "Pagaste impuesto a los Ingresos Brutos $7.000"
+    )
+    expect(parsed.kind).toBe("expense")
+  })
+
+  it("keeps delimiter words that are part of the merchant name", () => {
+    expect(
+      parseTransactionText("Compraste $500 en Café del Centro").merchant
+    ).toBe("Café del Centro")
+    expect(
+      parseTransactionText("Compraste $500 en Todo por Dos").merchant
+    ).toBe("Todo por Dos")
+  })
 })

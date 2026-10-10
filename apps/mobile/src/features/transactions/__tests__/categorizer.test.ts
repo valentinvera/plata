@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 
-import { categorize, normalizeText } from "../categorizer"
+import { categorize } from "../categorizer"
+import { normalizeText } from "../text"
 
 describe("normalizeText", () => {
   it("lowercases and strips diacritics", () => {

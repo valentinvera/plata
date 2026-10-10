@@ -1,26 +1,6 @@
 import { DEFAULT_CATEGORIES, UNCATEGORIZED_ID } from "./categories"
+import { containsKeyword, normalizeText } from "./text"
 import type { CategorizationResult, Category } from "./types"
-
-const DIACRITICS = /[\u0300-\u036f]/g
-const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g
-
-const keywordRegexCache = new Map<string, RegExp>()
-
-function keywordRegex(keyword: string): RegExp {
-  const cached = keywordRegexCache.get(keyword)
-  if (cached) {
-    return cached
-  }
-
-  const escaped = keyword.replace(REGEX_SPECIALS, "\\$&")
-  const regex = new RegExp(`\\b${escaped}\\b`, "u")
-  keywordRegexCache.set(keyword, regex)
-  return regex
-}
-
-export function normalizeText(text: string): string {
-  return text.normalize("NFD").replace(DIACRITICS, "").toLowerCase().trim()
-}
 
 interface CategoryMatch {
   category: Category
@@ -36,7 +16,7 @@ function findBestMatch(
   for (const category of categories) {
     let matches = 0
     for (const keyword of category.keywords) {
-      if (keywordRegex(keyword).test(normalized)) {
+      if (containsKeyword(normalized, keyword)) {
         matches += 1
       }
     }
