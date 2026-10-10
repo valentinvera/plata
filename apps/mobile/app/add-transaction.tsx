@@ -1,4 +1,4 @@
-import { router } from "expo-router"
+import { router, useLocalSearchParams } from "expo-router"
 import { Button, Card, Chip, Input, Label, TextField } from "heroui-native"
 import { useCallback, useMemo, useState } from "react"
 import { ScrollView, Text, View } from "react-native"
@@ -15,7 +15,10 @@ import { parseTransactionText } from "@/src/features/transactions/parser"
 import type { TransactionState } from "@/src/features/transactions/types"
 
 export default function AddTransactionScreen() {
-  const [text, setText] = useState("")
+  const params = useLocalSearchParams()
+  const [text, setText] = useState(
+    typeof params.text === "string" ? params.text : ""
+  )
   const [categoryOverride, setCategoryOverride] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const createTransaction = useCreateTransaction()
