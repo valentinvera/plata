@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-
+import { listBudgets, setBudget } from "./budget-repository"
 import type { DateRange } from "./periods"
 import {
   createTransaction,
@@ -69,5 +69,22 @@ export function useUpdateTransactionState() {
       updateTransactionState(input.id, input.state),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
+  })
+}
+
+export const budgetsQueryKey = ["budgets"] as const
+
+export function useBudgets() {
+  return useQuery({ queryFn: listBudgets, queryKey: budgetsQueryKey })
+}
+
+export function useSetBudget() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { amount: number; categoryId: string }) =>
+      setBudget(input.categoryId, input.amount),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: budgetsQueryKey }),
   })
 }

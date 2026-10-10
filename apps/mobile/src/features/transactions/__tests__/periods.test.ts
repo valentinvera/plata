@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test"
 
-import { isWithinRange, startOfDay, summarize, weekRange } from "../periods"
+import {
+  isWithinRange,
+  monthRange,
+  startOfDay,
+  summarize,
+  weekRange,
+} from "../periods"
 import type { Transaction } from "../types"
 
 function makeTransaction(overrides: Partial<Transaction>): Transaction {
@@ -40,6 +46,18 @@ describe("weekRange", () => {
     expect(start.getDay()).toBe(1)
     expect(start.getHours()).toBe(0)
     expect(end.getDay()).toBe(1)
+  })
+})
+
+describe("monthRange", () => {
+  it("starts on the 1st at 00:00 and ends the following month", () => {
+    const range = monthRange(new Date(2026, 7, 15, 10).getTime())
+    const start = new Date(range.start)
+    const end = new Date(range.end)
+
+    expect(start.getDate()).toBe(1)
+    expect(start.getHours()).toBe(0)
+    expect(end.getMonth()).toBe((start.getMonth() + 1) % 12)
   })
 })
 

@@ -45,6 +45,18 @@ export function weekRange(timestamp: number): DateRange {
   return { end: end.getTime(), start }
 }
 
+export function monthRange(timestamp: number): DateRange {
+  const date = new Date(timestamp)
+  date.setHours(0, 0, 0, 0)
+  date.setDate(1)
+
+  const start = date.getTime()
+  const end = new Date(date)
+  end.setMonth(end.getMonth() + 1)
+
+  return { end: end.getTime(), start }
+}
+
 export function isWithinRange(
   transaction: Transaction,
   range: DateRange
