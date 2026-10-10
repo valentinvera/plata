@@ -116,7 +116,7 @@ function AccountRow({
 
   const isBusy = update.isPending || remove.isPending
 
-  const commit = useCallback(() => {
+  const commit = useCallback(async () => {
     const trimmed = name.trim()
 
     if (trimmed === account.name) {
@@ -131,7 +131,12 @@ function AccountRow({
     }
 
     setError(null)
-    update.mutate({ id: account.id, update: { name: trimmed } })
+    try {
+      await update.mutateAsync({ id: account.id, update: { name: trimmed } })
+    } catch {
+      setError("Could not rename the account. Please try again.")
+      setName(account.name)
+    }
   }, [account.id, account.name, accounts, name, update])
 
   const handleDelete = useCallback(async () => {
