@@ -8,7 +8,7 @@ const {
 } = require("react-native-reanimated/metro-config")
 
 /** @type {import('expo/metro-config').MetroConfig} */
-// biome-ignore lint/correctness/noGlobalDirnameFilename: este config es CommonJS y lo carga Node/Expo; import.meta.dirname lo rompe bajo Node 22+ (detección de ESM).
+// biome-ignore lint/correctness/noGlobalDirnameFilename: this config is CommonJS and is loaded by Node/Expo; import.meta.dirname breaks it under Node 22+ (ESM detection).
 const config = getDefaultConfig(__dirname)
 
 const uniwindConfig = withUniwindConfig(wrapWithReanimatedMetroConfig(config), {

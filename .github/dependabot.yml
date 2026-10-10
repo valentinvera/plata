@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Mantiene las GitHub Actions pineadas a SHA actualizadas de forma segura.
+  # Keeps SHA-pinned GitHub Actions updated safely.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

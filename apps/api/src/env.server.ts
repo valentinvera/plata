@@ -1,4 +1,4 @@
 import "varlock/auto-load"
 
-// biome-ignore lint/performance/noBarrelFile: shim que dispara el auto-load de Varlock y reexpone ENV
+// biome-ignore lint/performance/noBarrelFile: shim that triggers Varlock's auto-load and re-exports ENV
 export { ENV } from "./env"

@@ -114,7 +114,7 @@ function MessageScrollerButton({
   )
 }
 
-// biome-ignore lint/performance/noBarrelFile: re-export de los hooks del primitivo de shadcn
+// biome-ignore lint/performance/noBarrelFile: re-export of the shadcn primitive's hooks
 export {
   useMessageScroller,
   useMessageScrollerScrollable,
