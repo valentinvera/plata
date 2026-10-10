@@ -1,5 +1,6 @@
 import { categorize } from "./categorizer"
 import { parseTransactionText } from "./parser"
+import { containsKeyword, normalizeText } from "./text"
 import type { NewTransaction } from "./types"
 
 export interface NotificationPayload {
@@ -9,6 +10,26 @@ export interface NotificationPayload {
   time: string
   title: string
 }
+
+// Notifications come from every app, so only texts that read like a payment are
+// turned into suggestions (avoids chat messages or promotions with a "$ amount").
+const TRANSACTION_SIGNALS = [
+  "abonaste",
+  "acreditaron",
+  "cobraste",
+  "compra",
+  "compraste",
+  "consumo",
+  "cuota",
+  "debito",
+  "ingreso",
+  "pagaste",
+  "pago",
+  "recibiste",
+  "suscripcion",
+  "transferencia",
+  "transferiste",
+]
 
 function stringField(value: unknown): string {
   return typeof value === "string" ? value : ""
@@ -48,13 +69,38 @@ export function notificationText(payload: NotificationPayload): string {
     .trim()
 }
 
+export function hasTransactionSignal(text: string): boolean {
+  const normalized = normalizeText(text)
+  return TRANSACTION_SIGNALS.some((signal) =>
+    containsKeyword(normalized, signal)
+  )
+}
+
+function notificationTimestamp(payload: NotificationPayload): number | null {
+  const value = Number(payload.time)
+  return Number.isFinite(value) && value > 0 ? value : null
+}
+
+export function notificationTransactionId(
+  payload: NotificationPayload
+): string {
+  const key = `${payload.app}|${payload.time}|${notificationText(payload)}`
+  let hash = 0
+
+  for (const character of key) {
+    hash = (hash * 31 + (character.codePointAt(0) ?? 0)) % 2_147_483_647
+  }
+
+  return `notif-${hash.toString(16)}`
+}
+
 export function buildNotificationTransaction(
   payload: NotificationPayload,
   now: number = Date.now()
 ): NewTransaction | null {
   const text = notificationText(payload)
 
-  if (!text) {
+  if (!(text && hasTransactionSignal(text))) {
     return null
   }
 
@@ -75,7 +121,7 @@ export function buildNotificationTransaction(
     kind: parsed.kind,
     merchant: parsed.merchant,
     note: null,
-    occurredAt: parsed.occurredAt ?? now,
+    occurredAt: parsed.occurredAt ?? notificationTimestamp(payload) ?? now,
     rawRef: text,
     source: "notification",
     state: "suggested",

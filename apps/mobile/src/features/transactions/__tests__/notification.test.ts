@@ -2,7 +2,9 @@ import { describe, expect, it } from "bun:test"
 
 import {
   buildNotificationTransaction,
+  hasTransactionSignal,
   notificationText,
+  notificationTransactionId,
   parseNotificationPayload,
 } from "../notification"
 
@@ -68,6 +70,41 @@ describe("notificationText", () => {
   })
 })
 
+describe("hasTransactionSignal", () => {
+  it("detects payment verbs", () => {
+    expect(hasTransactionSignal("Compraste $10 en CARREFOUR")).toBe(true)
+    expect(hasTransactionSignal("Pagaste $4.500")).toBe(true)
+    expect(hasTransactionSignal("Transferiste $1.000")).toBe(true)
+  })
+
+  it("ignores unrelated texts", () => {
+    expect(hasTransactionSignal("Send me $500")).toBe(false)
+    expect(hasTransactionSignal("Hola, ¿cómo estás?")).toBe(false)
+  })
+})
+
+describe("notificationTransactionId", () => {
+  const payload = {
+    app: "com.bank",
+    bigText: "",
+    text: "Compraste $10 en CARREFOUR",
+    time: "1700000000000",
+    title: "",
+  }
+
+  it("is stable for the same notification", () => {
+    expect(notificationTransactionId(payload)).toBe(
+      notificationTransactionId({ ...payload })
+    )
+  })
+
+  it("differs when the source notification differs", () => {
+    expect(notificationTransactionId(payload)).not.toBe(
+      notificationTransactionId({ ...payload, time: "1700000000001" })
+    )
+  })
+})
+
 describe("buildNotificationTransaction", () => {
   it("builds a suggested notification transaction from a parsed amount", () => {
     const payload = parseNotificationPayload(raw)
@@ -82,10 +119,34 @@ describe("buildNotificationTransaction", () => {
     expect(transaction?.accountId).toBeNull()
   })
 
+  it("uses the notification timestamp when the text has no date", () => {
+    const transaction = buildNotificationTransaction({
+      app: "com.bank",
+      bigText: "",
+      text: "Compraste $10 en CARREFOUR",
+      time: "1700000000000",
+      title: "",
+    })
+
+    expect(transaction?.occurredAt).toBe(1_700_000_000_000)
+  })
+
+  it("ignores amounts that are not a payment", () => {
+    expect(
+      buildNotificationTransaction({
+        app: "com.whatsapp",
+        bigText: "",
+        text: "Send me $500",
+        time: "",
+        title: "",
+      })
+    ).toBeNull()
+  })
+
   it("returns null when no amount can be parsed", () => {
     expect(
       buildNotificationTransaction({
-        app: "",
+        app: "com.bank",
         bigText: "",
         text: "Hola, ¿cómo estás?",
         time: "",

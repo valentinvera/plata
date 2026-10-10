@@ -1,8 +1,9 @@
 import {
   buildNotificationTransaction,
+  notificationTransactionId,
   parseNotificationPayload,
 } from "./notification"
-import { createTransaction } from "./repository"
+import { createTransaction, getTransaction } from "./repository"
 
 export async function ingestNotification(raw: string): Promise<boolean> {
   const payload = parseNotificationPayload(raw)
@@ -17,6 +18,18 @@ export async function ingestNotification(raw: string): Promise<boolean> {
     return false
   }
 
-  await createTransaction(transaction)
-  return true
+  // Android can repost the same notification, so the id is derived from its
+  // source: a repeated delivery resolves to the same row and is a no-op.
+  const id = notificationTransactionId(payload)
+
+  if (await getTransaction(id)) {
+    return false
+  }
+
+  try {
+    await createTransaction({ ...transaction, id })
+    return true
+  } catch {
+    return false
+  }
 }
