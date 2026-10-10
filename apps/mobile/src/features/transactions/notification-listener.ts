@@ -1,4 +1,4 @@
-import { AppRegistry } from "react-native"
+import { AppRegistry, Platform } from "react-native"
 import RNAndroidNotificationListener, {
   RNAndroidNotificationListenerHeadlessJsName,
 } from "react-native-android-notification-listener"
@@ -22,7 +22,7 @@ async function handleHeadlessNotification({
 let isRegistered = false
 
 export function registerNotificationListener(): void {
-  if (isRegistered) {
+  if (isRegistered || Platform.OS !== "android") {
     return
   }
 
@@ -34,9 +34,15 @@ export function registerNotificationListener(): void {
 }
 
 export function getNotificationPermission(): Promise<NotificationPermission> {
+  if (Platform.OS !== "android") {
+    return Promise.resolve("unknown")
+  }
+
   return RNAndroidNotificationListener.getPermissionStatus()
 }
 
 export function openNotificationSettings(): void {
-  RNAndroidNotificationListener.requestPermission()
+  if (Platform.OS === "android") {
+    RNAndroidNotificationListener.requestPermission()
+  }
 }
