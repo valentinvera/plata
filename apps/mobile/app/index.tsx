@@ -1,12 +1,14 @@
 import { router } from "expo-router"
 import { Button, Card, Spinner } from "heroui-native"
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import { SectionList, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
+import { getAccountName } from "@/src/features/transactions/accounts"
 import { getCategoryById } from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
 import {
+  useAccounts,
   useConfirmedTransactions,
   useSuggestedTransactions,
   useUpdateTransactionState,
@@ -33,6 +35,9 @@ export default function TransactionsScreen() {
     refetch: refetchConfirmed,
   } = useConfirmedTransactions()
   const updateState = useUpdateTransactionState()
+  const { data: accountsData } = useAccounts()
+
+  const accounts = useMemo(() => accountsData ?? [], [accountsData])
 
   const isLoading = suggestedLoading || confirmedLoading
   const isError = suggestedError || confirmedError
@@ -73,15 +78,17 @@ export default function TransactionsScreen() {
     ({ item, section }: { item: Transaction; section: TransactionSection }) => {
       const category = getCategoryById(item.categoryId).name
       const amount = formatAmount(item.amount, item.currency)
+      const accountName = getAccountName(accounts, item.accountId)
+      const meta = accountName
+        ? `${accountName} · ${category} · ${amount}`
+        : `${category} · ${amount}`
 
       return (
         <Card className="mt-3 p-4">
           <Text className="font-medium text-foreground">
             {item.merchant ?? "No merchant"}
           </Text>
-          <Text className="mt-1 text-muted text-xs">
-            {category} · {amount}
-          </Text>
+          <Text className="mt-1 text-muted text-xs">{meta}</Text>
           {section.type === "suggested" ? (
             <Button
               className="mt-3"
@@ -94,7 +101,7 @@ export default function TransactionsScreen() {
         </Card>
       )
     },
-    [handleConfirm]
+    [accounts, handleConfirm]
   )
 
   const renderSectionHeader = useCallback(

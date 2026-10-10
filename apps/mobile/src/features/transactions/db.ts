@@ -1,5 +1,7 @@
 import { openDatabaseAsync, type SQLiteDatabase } from "expo-sqlite"
 
+import { DEFAULT_ACCOUNTS } from "./accounts"
+
 const DATABASE_NAME = "plata.db"
 
 const SCHEMA = `
@@ -19,7 +21,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   raw_ref TEXT,
   source TEXT NOT NULL,
   state TEXT NOT NULL,
-  updated_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL,
+  account_id TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_occurred_at ON transactions (occurred_at);
@@ -30,13 +33,60 @@ CREATE TABLE IF NOT EXISTS budgets (
   amount INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS accounts (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
 `
 
 let databasePromise: Promise<SQLiteDatabase> | null = null
 
+async function ensureTransactionColumns(
+  database: SQLiteDatabase
+): Promise<void> {
+  const columns = await database.getAllAsync<{ name: string }>(
+    "PRAGMA table_info(transactions)"
+  )
+
+  if (!columns.some((column) => column.name === "account_id")) {
+    await database.execAsync(
+      "ALTER TABLE transactions ADD COLUMN account_id TEXT"
+    )
+  }
+}
+
+async function seedDefaultAccounts(database: SQLiteDatabase): Promise<void> {
+  const result = await database.getFirstAsync<{ count: number }>(
+    "SELECT COUNT(*) as count FROM accounts"
+  )
+
+  if ((result?.count ?? 0) > 0) {
+    return
+  }
+
+  await database.withTransactionAsync(async () => {
+    await Promise.all(
+      DEFAULT_ACCOUNTS.map((account) =>
+        database.runAsync(
+          "INSERT INTO accounts (id, name, kind, created_at) VALUES (?, ?, ?, ?)",
+          account.id,
+          account.name,
+          account.kind,
+          Date.now()
+        )
+      )
+    )
+  })
+}
+
 async function initializeDatabase(): Promise<SQLiteDatabase> {
   const database = await openDatabaseAsync(DATABASE_NAME)
   await database.execAsync(SCHEMA)
+  await ensureTransactionColumns(database)
+  await seedDefaultAccounts(database)
   return database
 }
 

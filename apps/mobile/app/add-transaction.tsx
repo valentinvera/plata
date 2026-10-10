@@ -10,7 +10,10 @@ import {
 } from "@/src/features/transactions/categories"
 import { categorize } from "@/src/features/transactions/categorizer"
 import { formatAmount } from "@/src/features/transactions/format"
-import { useCreateTransaction } from "@/src/features/transactions/hooks"
+import {
+  useAccounts,
+  useCreateTransaction,
+} from "@/src/features/transactions/hooks"
 import { parseTransactionText } from "@/src/features/transactions/parser"
 import type { TransactionState } from "@/src/features/transactions/types"
 
@@ -20,8 +23,13 @@ export default function AddTransactionScreen() {
     typeof params.text === "string" ? params.text : ""
   )
   const [categoryOverride, setCategoryOverride] = useState<string | null>(null)
+  const [accountId, setAccountId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const createTransaction = useCreateTransaction()
+  const { data: accountsData } = useAccounts()
+
+  const accounts = accountsData ?? []
+  const selectedAccountId = accountId ?? accounts[0]?.id ?? null
 
   const preview = useMemo(() => {
     const parsed = parseTransactionText(text)
@@ -34,20 +42,28 @@ export default function AddTransactionScreen() {
     }
   }, [categoryOverride, text])
 
+  // Accounts load asynchronously; require a resolved account so a transaction is
+  // never stored without one (e.g. saving right after a share intent cold open).
   const canSave =
     preview.amount !== null &&
     preview.amount > 0 &&
+    selectedAccountId !== null &&
     !createTransaction.isPending
 
   const handleSave = useCallback(
     async (state: TransactionState) => {
-      if (preview.amount === null || preview.amount <= 0) {
+      if (
+        preview.amount === null ||
+        preview.amount <= 0 ||
+        selectedAccountId === null
+      ) {
         return
       }
 
       setError(null)
       try {
         await createTransaction.mutateAsync({
+          accountId: selectedAccountId,
           amount: preview.amount,
           categoryId: preview.categoryId,
           confidence: preview.confidence,
@@ -65,7 +81,7 @@ export default function AddTransactionScreen() {
         setError("Could not save the transaction. Please try again.")
       }
     },
-    [createTransaction, preview, text]
+    [createTransaction, preview, selectedAccountId, text]
   )
 
   const handleConfirmed = useCallback(async () => {
@@ -114,6 +130,21 @@ export default function AddTransactionScreen() {
           Confidence: {preview.confidence.toFixed(2)}
         </Text>
       </Card>
+
+      <View className="mt-4">
+        <Text className="mb-2 text-muted text-sm">Account</Text>
+        <View className="flex-row flex-wrap gap-2">
+          {accounts.map((account) => (
+            <Chip
+              key={account.id}
+              onPress={() => setAccountId(account.id)}
+              variant={selectedAccountId === account.id ? "primary" : "soft"}
+            >
+              <Chip.Label>{account.name}</Chip.Label>
+            </Chip>
+          ))}
+        </View>
+      </View>
 
       <View className="mt-4">
         <Text className="mb-2 text-muted text-sm">Category</Text>

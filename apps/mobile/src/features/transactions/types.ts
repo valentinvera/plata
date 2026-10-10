@@ -26,6 +26,7 @@ export interface ParsedTransaction {
 }
 
 export interface Transaction {
+  accountId: string | null
   amount: number
   categoryId: string
   confidence: number | null
@@ -43,6 +44,7 @@ export interface Transaction {
 }
 
 export interface NewTransaction {
+  accountId: string | null
   amount: number
   categoryId: string
   confidence: number | null

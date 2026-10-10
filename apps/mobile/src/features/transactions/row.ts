@@ -7,6 +7,7 @@ import type {
 } from "./types"
 
 export interface TransactionRow {
+  account_id: string | null
   amount: number
   category_id: string
   confidence: number | null
@@ -25,6 +26,7 @@ export interface TransactionRow {
 
 export function rowToTransaction(row: TransactionRow): Transaction {
   return {
+    accountId: row.account_id,
     amount: row.amount,
     categoryId: row.category_id,
     confidence: row.confidence,
