@@ -60,23 +60,45 @@ describe("isWithinRange", () => {
 })
 
 describe("summarize", () => {
-  it("totals expenses and income and groups expenses by category", () => {
-    const summary = summarize([
-      makeTransaction({ amount: 1000, categoryId: "food", kind: "expense" }),
-      makeTransaction({ amount: 500, categoryId: "food", kind: "expense" }),
+  it("totals per currency and groups expenses by category", () => {
+    const summaries = summarize([
+      makeTransaction({ amount: 1000, categoryId: "food", currency: "ARS" }),
+      makeTransaction({ amount: 500, categoryId: "food", currency: "ARS" }),
       makeTransaction({
         amount: 300,
         categoryId: "transport",
-        kind: "expense",
+        currency: "ARS",
       }),
-      makeTransaction({ amount: 9000, categoryId: "income", kind: "income" }),
+      makeTransaction({
+        amount: 9000,
+        categoryId: "income",
+        currency: "ARS",
+        kind: "income",
+      }),
+      makeTransaction({
+        amount: 2000,
+        categoryId: "shopping",
+        currency: "USD",
+      }),
     ])
 
-    expect(summary.expense).toBe(1800)
-    expect(summary.income).toBe(9000)
-    expect(summary.byCategory).toEqual([
-      { categoryId: "food", total: 1500 },
-      { categoryId: "transport", total: 300 },
-    ])
+    expect(summaries).toHaveLength(2)
+
+    expect(summaries.find((item) => item.currency === "ARS")).toEqual({
+      byCategory: [
+        { categoryId: "food", total: 1500 },
+        { categoryId: "transport", total: 300 },
+      ],
+      currency: "ARS",
+      expense: 1800,
+      income: 9000,
+    })
+
+    expect(summaries.find((item) => item.currency === "USD")).toEqual({
+      byCategory: [{ categoryId: "shopping", total: 2000 }],
+      currency: "USD",
+      expense: 2000,
+      income: 0,
+    })
   })
 })

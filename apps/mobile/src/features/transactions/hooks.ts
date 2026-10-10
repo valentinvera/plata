@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
+import type { DateRange } from "./periods"
 import {
   createTransaction,
   listTransactions,
+  listTransactionsInRange,
   updateTransactionState,
 } from "./repository"
 import type { NewTransaction, TransactionState } from "./types"
@@ -13,6 +15,13 @@ export function useTransactions() {
   return useQuery({
     queryFn: () => listTransactions(),
     queryKey: transactionsQueryKey,
+  })
+}
+
+export function useTransactionsInRange(range: DateRange) {
+  return useQuery({
+    queryFn: () => listTransactionsInRange(range.start, range.end),
+    queryKey: [...transactionsQueryKey, "range", range.start, range.end],
   })
 }
 

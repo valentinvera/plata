@@ -1,3 +1,4 @@
+import { useFocusEffect } from "expo-router"
 import { Button, Card, Spinner } from "heroui-native"
 import { useCallback, useMemo, useState } from "react"
 import { Text, View } from "react-native"
@@ -8,29 +9,23 @@ import {
   formatAmount,
   formatDateRange,
 } from "@/src/features/transactions/format"
-import { useTransactions } from "@/src/features/transactions/hooks"
-import {
-  isWithinRange,
-  summarize,
-  weekRange,
-} from "@/src/features/transactions/periods"
-
-const DEFAULT_CURRENCY = "ARS"
+import { useTransactionsInRange } from "@/src/features/transactions/hooks"
+import { summarize, weekRange } from "@/src/features/transactions/periods"
 
 export default function WeekScreen() {
-  const { data, isError, isLoading, refetch } = useTransactions()
-  const [now] = useState(Date.now)
-  const transactions = data ?? []
-
+  const [now, setNow] = useState(Date.now)
   const range = useMemo(() => weekRange(now), [now])
-  const weekTransactions = useMemo(
-    () =>
-      transactions.filter(
-        (item) => item.state === "confirmed" && isWithinRange(item, range)
-      ),
-    [range, transactions]
+  const { data, isError, isLoading, refetch } = useTransactionsInRange(range)
+
+  const confirmed = (data ?? []).filter((item) => item.state === "confirmed")
+  const summaries = useMemo(() => summarize(confirmed), [confirmed])
+
+  // Refresh the range when the screen regains focus so a week boundary is not missed.
+  useFocusEffect(
+    useCallback(() => {
+      setNow(Date.now())
+    }, [])
   )
-  const summary = useMemo(() => summarize(weekTransactions), [weekTransactions])
 
   const handleRetry = useCallback(async () => {
     await refetch()
@@ -58,43 +53,55 @@ export default function WeekScreen() {
         </Card>
       ) : null}
 
-      {isLoading || isError ? null : (
-        <>
-          <Card className="mt-4 p-5">
-            <Text className="text-muted text-sm">Spent</Text>
-            <Text className="mt-1 font-bold text-2xl text-foreground">
-              {formatAmount(summary.expense, DEFAULT_CURRENCY)}
-            </Text>
-            <Text className="mt-3 text-muted text-sm">Income</Text>
-            <Text className="mt-1 font-medium text-foreground">
-              {formatAmount(summary.income, DEFAULT_CURRENCY)}
-            </Text>
-          </Card>
-
-          <Card className="mt-4 p-5">
-            <Text className="mb-2 font-semibold text-foreground">
-              By category
-            </Text>
-            {summary.byCategory.length === 0 ? (
-              <Text className="text-muted text-sm">No expenses this week.</Text>
-            ) : (
-              summary.byCategory.map((item) => (
-                <View
-                  className="mt-2 flex-row items-center justify-between"
-                  key={item.categoryId}
-                >
-                  <Text className="text-foreground">
-                    {getCategoryById(item.categoryId).name}
-                  </Text>
-                  <Text className="text-muted text-sm">
-                    {formatAmount(item.total, DEFAULT_CURRENCY)}
-                  </Text>
-                </View>
-              ))
-            )}
-          </Card>
-        </>
+      {isLoading || isError || summaries.length > 0 ? null : (
+        <Text className="mt-4 text-muted text-sm">
+          No confirmed transactions this week.
+        </Text>
       )}
+
+      {isLoading || isError || summaries.length === 0
+        ? null
+        : summaries.map((summary) => (
+            <View key={summary.currency}>
+              <Card className="mt-4 p-5">
+                <Text className="text-muted text-sm">
+                  Spent ({summary.currency})
+                </Text>
+                <Text className="mt-1 font-bold text-2xl text-foreground">
+                  {formatAmount(summary.expense, summary.currency)}
+                </Text>
+                <Text className="mt-3 text-muted text-sm">Income</Text>
+                <Text className="mt-1 font-medium text-foreground">
+                  {formatAmount(summary.income, summary.currency)}
+                </Text>
+              </Card>
+
+              <Card className="mt-4 p-5">
+                <Text className="mb-2 font-semibold text-foreground">
+                  By category
+                </Text>
+                {summary.byCategory.length === 0 ? (
+                  <Text className="text-muted text-sm">
+                    No expenses this week.
+                  </Text>
+                ) : (
+                  summary.byCategory.map((item) => (
+                    <View
+                      className="mt-2 flex-row items-center justify-between"
+                      key={item.categoryId}
+                    >
+                      <Text className="text-foreground">
+                        {getCategoryById(item.categoryId).name}
+                      </Text>
+                      <Text className="text-muted text-sm">
+                        {formatAmount(item.total, summary.currency)}
+                      </Text>
+                    </View>
+                  ))
+                )}
+              </Card>
+            </View>
+          ))}
     </Container>
   )
 }

@@ -1,4 +1,4 @@
-import type { Transaction } from "./types"
+import type { Currency, Transaction } from "./types"
 
 export const DAYS_PER_WEEK = 7
 
@@ -19,8 +19,9 @@ export interface CategorySummary {
   total: number
 }
 
-export interface TransactionSummary {
+export interface CurrencySummary {
   byCategory: CategorySummary[]
+  currency: Currency
   expense: number
   income: number
 }
@@ -73,27 +74,42 @@ export function groupByDay(transactions: readonly Transaction[]): DayGroup[] {
 
 export function summarize(
   transactions: readonly Transaction[]
-): TransactionSummary {
-  let expense = 0
-  let income = 0
-  const byCategoryTotals = new Map<string, number>()
+): CurrencySummary[] {
+  const summaries = new Map<Currency, CurrencySummary>()
 
   for (const transaction of transactions) {
+    let summary = summaries.get(transaction.currency)
+    if (!summary) {
+      summary = {
+        byCategory: [],
+        currency: transaction.currency,
+        expense: 0,
+        income: 0,
+      }
+      summaries.set(transaction.currency, summary)
+    }
+
     if (transaction.kind === "income") {
-      income += transaction.amount
+      summary.income += transaction.amount
       continue
     }
 
-    expense += transaction.amount
-    byCategoryTotals.set(
-      transaction.categoryId,
-      (byCategoryTotals.get(transaction.categoryId) ?? 0) + transaction.amount
+    summary.expense += transaction.amount
+    const existing = summary.byCategory.find(
+      (entry) => entry.categoryId === transaction.categoryId
     )
+    if (existing) {
+      existing.total += transaction.amount
+    } else {
+      summary.byCategory.push({
+        categoryId: transaction.categoryId,
+        total: transaction.amount,
+      })
+    }
   }
 
-  const byCategory = [...byCategoryTotals.entries()]
-    .map(([categoryId, total]) => ({ categoryId, total }))
-    .sort((a, b) => b.total - a.total)
-
-  return { byCategory, expense, income }
+  return [...summaries.values()].map((summary) => ({
+    ...summary,
+    byCategory: [...summary.byCategory].sort((a, b) => b.total - a.total),
+  }))
 }
