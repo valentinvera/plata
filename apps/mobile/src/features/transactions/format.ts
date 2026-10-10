@@ -48,13 +48,9 @@ export function parseAmountInput(value: string): number | null {
     return null
   }
 
-  const normalized = trimmed.replace(/\./g, "").replace(",", ".")
-  const parsed = Number.parseFloat(normalized)
+  const digits = trimmed.replace(/\./g, "")
+  const [whole, fraction = ""] = digits.split(",")
+  const cents = Number(`${whole}${fraction.padEnd(2, "0")}`)
 
-  if (!Number.isFinite(parsed)) {
-    return null
-  }
-
-  const cents = Math.round(parsed * 100)
   return Number.isSafeInteger(cents) ? cents : null
 }

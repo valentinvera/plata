@@ -34,6 +34,11 @@ describe("parseAmountInput", () => {
     expect(parseAmountInput("1.2.3")).toBeNull()
     expect(parseAmountInput("1,234")).toBeNull()
     expect(parseAmountInput(",50")).toBeNull()
+  })
+
+  it("parses large values exactly and rejects unsafe cents", () => {
+    expect(parseAmountInput("90071992547409,90")).toBe(9_007_199_254_740_990)
+    expect(parseAmountInput("90071992547409,92")).toBeNull()
     expect(parseAmountInput("90071992547409,93")).toBeNull()
   })
 })
