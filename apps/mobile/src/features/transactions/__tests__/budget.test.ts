@@ -50,4 +50,18 @@ describe("budgetProgress", () => {
     expect(transport?.budget.amount).toBe(0)
     expect(transport).toMatchObject({ ratio: 0, spent: 0 })
   })
+
+  it("ignores expenses in another currency", () => {
+    const progress = budgetProgress(
+      [
+        makeTransaction({ amount: 1500, categoryId: "food", currency: "ARS" }),
+        makeTransaction({ amount: 999, categoryId: "food", currency: "USD" }),
+      ],
+      categories,
+      [{ amount: 1000, categoryId: "food", updatedAt: 0 }]
+    )
+
+    const food = progress.find((item) => item.category.id === "food")
+    expect(food).toMatchObject({ ratio: 1.5, spent: 1500 })
+  })
 })

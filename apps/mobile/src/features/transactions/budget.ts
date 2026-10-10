@@ -1,4 +1,4 @@
-import type { Category, Transaction } from "./types"
+import type { Category, Currency, Transaction } from "./types"
 
 export interface Budget {
   amount: number
@@ -16,7 +16,8 @@ export interface BudgetProgress {
 export function budgetProgress(
   transactions: readonly Transaction[],
   categories: readonly Category[],
-  budgets: readonly Budget[]
+  budgets: readonly Budget[],
+  currency: Currency = "ARS"
 ): BudgetProgress[] {
   const budgetByCategory = new Map(
     budgets.map((budget) => [budget.categoryId, budget])
@@ -24,7 +25,7 @@ export function budgetProgress(
   const spentByCategory = new Map<string, number>()
 
   for (const transaction of transactions) {
-    if (transaction.kind !== "expense") {
+    if (transaction.kind !== "expense" || transaction.currency !== currency) {
       continue
     }
     spentByCategory.set(
