@@ -1,12 +1,11 @@
 import { router } from "expo-router"
 import { Button, Card, Chip, Spinner } from "heroui-native"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { Pressable, ScrollView, SectionList, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
 import {
   ALL_ACCOUNTS,
-  filterTransactionsByAccount,
   getAccountName,
   NO_ACCOUNT,
 } from "@/src/features/transactions/accounts"
@@ -27,39 +26,46 @@ interface TransactionSection {
 }
 
 export default function TransactionsScreen() {
+  const [accountFilter, setAccountFilter] = useState(ALL_ACCOUNTS)
+
   const {
     data: suggestedData,
     isError: suggestedError,
     isLoading: suggestedLoading,
     refetch: refetchSuggested,
-  } = useSuggestedTransactions()
+  } = useSuggestedTransactions(accountFilter)
   const {
     data: confirmedData,
     isError: confirmedError,
     isLoading: confirmedLoading,
     refetch: refetchConfirmed,
-  } = useConfirmedTransactions()
+  } = useConfirmedTransactions(accountFilter)
   const updateState = useUpdateTransactionState()
   const { data: accountsData } = useAccounts()
 
   const accounts = useMemo(() => accountsData ?? [], [accountsData])
-  const [accountFilter, setAccountFilter] = useState(ALL_ACCOUNTS)
+
+  // If the filtered account is deleted elsewhere, fall back to showing everything.
+  useEffect(() => {
+    if (!accountsData) {
+      return
+    }
+    if (accountFilter === ALL_ACCOUNTS || accountFilter === NO_ACCOUNT) {
+      return
+    }
+    if (!accountsData.some((account) => account.id === accountFilter)) {
+      setAccountFilter(ALL_ACCOUNTS)
+    }
+  }, [accountFilter, accountsData])
 
   const isLoading = suggestedLoading || confirmedLoading
   const isError = suggestedError || confirmedError
 
-  const sections: TransactionSection[] = [
-    {
-      data: filterTransactionsByAccount(suggestedData ?? [], accountFilter),
-      title: "To confirm",
-      type: "suggested",
-    },
-    {
-      data: filterTransactionsByAccount(confirmedData ?? [], accountFilter),
-      title: "Confirmed",
-      type: "confirmed",
-    },
+  const allSections: TransactionSection[] = [
+    { data: suggestedData ?? [], title: "To confirm", type: "suggested" },
+    { data: confirmedData ?? [], title: "Confirmed", type: "confirmed" },
   ]
+  const sections = allSections.filter((section) => section.data.length > 0)
 
   const handleRetry = useCallback(async () => {
     await Promise.all([refetchSuggested(), refetchConfirmed()])
@@ -132,17 +138,11 @@ export default function TransactionsScreen() {
   )
 
   const renderSectionHeader = useCallback(
-    ({ section }: { section: TransactionSection }) => {
-      if (section.data.length === 0) {
-        return null
-      }
-
-      return (
-        <Text className="mt-6 font-semibold text-foreground">
-          {section.title}
-        </Text>
-      )
-    },
+    ({ section }: { section: TransactionSection }) => (
+      <Text className="mt-6 font-semibold text-foreground">
+        {section.title}
+      </Text>
+    ),
     []
   )
 
@@ -231,7 +231,9 @@ export default function TransactionsScreen() {
           keyExtractor={keyExtractor}
           ListEmptyComponent={
             <Text className="mt-4 text-muted text-sm">
-              No transactions yet.
+              {accountFilter === ALL_ACCOUNTS
+                ? "No transactions yet."
+                : "No transactions for this filter."}
             </Text>
           }
           ListHeaderComponent={header}
