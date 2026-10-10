@@ -60,7 +60,8 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
   const remove = useDeleteTransaction()
 
   const amount = parseAmountInput(amountInput)
-  const canSave = amount !== null && amount > 0 && !update.isPending
+  const isBusy = update.isPending || remove.isPending
+  const canSave = amount !== null && amount > 0 && !isBusy
 
   const handleSave = useCallback(async () => {
     if (amount === null || amount <= 0) {
@@ -178,14 +179,14 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
               Delete this transaction? This cannot be undone.
             </Text>
             <Button
-              isDisabled={remove.isPending}
+              isDisabled={isBusy}
               onPress={handleDelete}
               variant="outline"
             >
               <Button.Label>Yes, delete</Button.Label>
             </Button>
             <Button
-              isDisabled={remove.isPending}
+              isDisabled={isBusy}
               onPress={() => setConfirmingDelete(false)}
               variant="outline"
             >
@@ -193,7 +194,11 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
             </Button>
           </>
         ) : (
-          <Button onPress={() => setConfirmingDelete(true)} variant="outline">
+          <Button
+            isDisabled={isBusy}
+            onPress={() => setConfirmingDelete(true)}
+            variant="outline"
+          >
             <Button.Label>Delete</Button.Label>
           </Button>
         )}
