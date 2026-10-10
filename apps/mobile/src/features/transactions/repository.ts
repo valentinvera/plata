@@ -6,14 +6,15 @@ import { rowToTransaction, type TransactionRow } from "./row"
 import type { NewTransaction, Transaction, TransactionState } from "./types"
 
 const COLUMNS =
-  "id, amount, category_id, confidence, created_at, currency, kind, merchant, note, occurred_at, raw_ref, source, state, updated_at"
+  "id, amount, category_id, confidence, created_at, currency, kind, merchant, note, occurred_at, raw_ref, source, state, updated_at, account_id"
 
-const INSERT_SQL = `INSERT INTO transactions (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+const INSERT_SQL = `INSERT INTO transactions (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 export const TRANSACTIONS_PAGE_SIZE = 100
 
 function buildTransaction(input: NewTransaction, now: number): Transaction {
   return {
+    accountId: input.accountId,
     amount: input.amount,
     categoryId: input.categoryId,
     confidence: input.confidence,
@@ -50,7 +51,8 @@ function insertTransaction(
     transaction.rawRef,
     transaction.source,
     transaction.state,
-    transaction.updatedAt
+    transaction.updatedAt,
+    transaction.accountId
   )
 }
 

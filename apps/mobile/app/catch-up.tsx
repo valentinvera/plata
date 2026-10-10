@@ -42,6 +42,7 @@ export default function CatchUpScreen() {
       setError(null)
       try {
         const inputs: NewTransaction[] = valid.map((suggestion) => ({
+          accountId: null,
           amount: suggestion.amount,
           categoryId: suggestion.categoryId,
           confidence: suggestion.confidence,

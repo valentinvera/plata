@@ -1,4 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+
+import { listAccounts } from "./account-repository"
 import { listBudgets, setBudget } from "./budget-repository"
 import type { DateRange } from "./periods"
 import {
@@ -87,4 +89,10 @@ export function useSetBudget() {
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: budgetsQueryKey }),
   })
+}
+
+export const accountsQueryKey = ["accounts"] as const
+
+export function useAccounts() {
+  return useQuery({ queryFn: listAccounts, queryKey: accountsQueryKey })
 }

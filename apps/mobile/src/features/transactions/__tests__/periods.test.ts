@@ -11,6 +11,7 @@ import type { Transaction } from "../types"
 
 function makeTransaction(overrides: Partial<Transaction>): Transaction {
   return {
+    accountId: null,
     amount: 1000,
     categoryId: "food",
     confidence: null,

@@ -3,6 +3,7 @@ import { describe, expect, it } from "bun:test"
 import { rowToTransaction, type TransactionRow } from "../row"
 
 const row: TransactionRow = {
+  account_id: "cash",
   amount: 123_456,
   category_id: "groceries",
   confidence: 0.9,
@@ -22,6 +23,7 @@ const row: TransactionRow = {
 describe("rowToTransaction", () => {
   it("maps snake_case columns to the domain model", () => {
     expect(rowToTransaction(row)).toEqual({
+      accountId: "cash",
       amount: 123_456,
       categoryId: "groceries",
       confidence: 0.9,
