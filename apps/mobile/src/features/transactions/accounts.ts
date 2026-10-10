@@ -62,3 +62,20 @@ export function validateAccountName(
 
   return duplicate ? "An account with that name already exists" : null
 }
+
+export const ALL_ACCOUNTS = "all"
+export const NO_ACCOUNT = "none"
+
+export function filterTransactionsByAccount<
+  T extends { accountId: string | null },
+>(transactions: readonly T[], filter: string): T[] {
+  if (filter === ALL_ACCOUNTS) {
+    return [...transactions]
+  }
+
+  if (filter === NO_ACCOUNT) {
+    return transactions.filter((transaction) => transaction.accountId === null)
+  }
+
+  return transactions.filter((transaction) => transaction.accountId === filter)
+}

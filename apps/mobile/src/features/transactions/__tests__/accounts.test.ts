@@ -1,8 +1,11 @@
 import { describe, expect, it } from "bun:test"
 
 import {
+  ALL_ACCOUNTS,
   DEFAULT_ACCOUNTS,
+  filterTransactionsByAccount,
   getAccountName,
+  NO_ACCOUNT,
   validateAccountName,
 } from "../accounts"
 
@@ -37,5 +40,33 @@ describe("validateAccountName", () => {
   it("accepts a new name and ignores the account being renamed", () => {
     expect(validateAccountName("Banco", accounts)).toBeNull()
     expect(validateAccountName("Efectivo", accounts, "cash")).toBeNull()
+  })
+})
+
+describe("filterTransactionsByAccount", () => {
+  const transactions = [
+    { accountId: "cash", id: "1" },
+    { accountId: null, id: "2" },
+    { accountId: "card", id: "3" },
+  ]
+
+  const ids = (filter: string) =>
+    filterTransactionsByAccount(transactions, filter).map((item) => item.id)
+
+  it("returns every transaction for the all filter", () => {
+    expect(ids(ALL_ACCOUNTS)).toEqual(["1", "2", "3"])
+  })
+
+  it("keeps only the selected account", () => {
+    expect(ids("cash")).toEqual(["1"])
+    expect(ids("card")).toEqual(["3"])
+  })
+
+  it("keeps only transactions without an account", () => {
+    expect(ids(NO_ACCOUNT)).toEqual(["2"])
+  })
+
+  it("returns nothing for an unknown account", () => {
+    expect(ids("unknown")).toEqual([])
   })
 })
