@@ -1,7 +1,14 @@
 import { router } from "expo-router"
 import { Button, Card, Chip, Spinner } from "heroui-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { Pressable, ScrollView, SectionList, Text, View } from "react-native"
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  SectionList,
+  Text,
+  View,
+} from "react-native"
 
 import { Container } from "@/components/container"
 import {
@@ -91,6 +98,10 @@ export default function TransactionsScreen() {
     router.push("/accounts")
   }, [])
 
+  const handleNotifications = useCallback(() => {
+    router.push("/notifications")
+  }, [])
+
   const handleConfirm = useCallback(
     (id: string) => {
       updateState.mutate({ id, state: "confirmed" })
@@ -167,6 +178,15 @@ export default function TransactionsScreen() {
       <Button className="mt-2" onPress={handleAccounts} variant="outline">
         <Button.Label>Accounts</Button.Label>
       </Button>
+      {Platform.OS === "android" ? (
+        <Button
+          className="mt-2"
+          onPress={handleNotifications}
+          variant="outline"
+        >
+          <Button.Label>Automatic import</Button.Label>
+        </Button>
+      ) : null}
 
       <Text className="mt-4 mb-2 text-muted text-sm">Filter by account</Text>
       <ScrollView

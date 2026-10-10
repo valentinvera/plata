@@ -1,15 +1,20 @@
 import "@/styles/globals.css"
-import { QueryClientProvider } from "@tanstack/react-query"
+import { focusManager, QueryClientProvider } from "@tanstack/react-query"
 import { router, Stack } from "expo-router"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
 import { HeroUINativeProvider } from "heroui-native"
 import { useEffect } from "react"
+import { AppState, Platform } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
 import { AppThemeProvider } from "@/contexts/app-theme-context"
+import { registerNotificationListener } from "@/src/features/transactions/notification-listener"
 import { getSharedText } from "@/src/features/transactions/share"
 import { queryClient } from "@/utils/trpc"
+
+// Register early so the headless task is available even when the app is closed.
+registerNotificationListener()
 
 function StackLayout() {
   return (
@@ -22,6 +27,10 @@ function StackLayout() {
       <Stack.Screen name="catch-up" options={{ title: "Catch up" }} />
       <Stack.Screen name="budgets" options={{ title: "Budgets" }} />
       <Stack.Screen name="accounts" options={{ title: "Accounts" }} />
+      <Stack.Screen
+        name="notifications"
+        options={{ title: "Automatic import" }}
+      />
       <Stack.Screen
         name="transaction/[id]"
         options={{ title: "Transaction" }}
@@ -53,6 +62,20 @@ function ShareIntentHandler() {
 }
 
 export default function Layout() {
+  // Background ingestion writes straight to SQLite, so refetch the cached
+  // queries when the app returns to the foreground.
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      return
+    }
+
+    const subscription = AppState.addEventListener("change", (status) => {
+      focusManager.setFocused(status === "active")
+    })
+
+    return () => subscription.remove()
+  }, [])
+
   return (
     <ShareIntentProvider>
       <QueryClientProvider client={queryClient}>
