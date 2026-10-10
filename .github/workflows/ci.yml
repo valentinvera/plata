@@ -4,21 +4,21 @@ on:
   push:
     branches: [main]
   pull_request:
-  # Requerido para que los checks corran en la merge queue de GitHub.
+  # Required so checks run on GitHub's merge queue.
   merge_group:
 
-# Cancela corridas viejas de la misma rama/PR para no malgastar minutos.
+# Cancel old runs from the same branch/PR to avoid wasting minutes.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# Principio de menor privilegio: este workflow solo necesita leer el repo.
-# Nunca uses pull_request_target con código de forks.
+# Least privilege: this workflow only needs to read the repo.
+# Never use pull_request_target with fork code.
 permissions:
   contents: read
 
-# Varlock valida los .env.schema durante el install y el build del frontend,
-# así que necesita estos valores presentes (no son secretos reales).
+# Varlock validates the .env.schema during install and the frontend build,
+# so these values must be present (they are not real secrets).
 env:
   NODE_ENV: test
   BETTER_AUTH_SECRET: ci-secret-ci-secret-ci-secret-ci-secret
@@ -30,12 +30,12 @@ env:
 
 jobs:
   quality:
-    name: Lint, tipos y tests
+    name: Lint, types and tests
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      # Las actions van pineadas a SHA (no a tags movibles) para mitigar
-      # supply-chain attacks. Dependabot las mantiene actualizadas.
+      # Actions are pinned to SHAs (not movable tags) to mitigate
+      # supply-chain attacks. Dependabot keeps them updated.
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -46,7 +46,7 @@ jobs:
         with:
           bun-version: 1.4.0
 
-      - name: Cache de Turbo
+      - name: Cache Turbo
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: .turbo
@@ -54,14 +54,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turbo-
 
-      - name: Instalar dependencias
+      - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Lint y formato
+      - name: Lint and format
         run: bun run check
 
-      - name: Tipos
+      - name: Types
         run: bun run check-types
 
-      - name: Tests unitarios
+      - name: Unit tests
         run: bun run test
