@@ -107,6 +107,20 @@ export async function listTransactionsInRange(
   return rows.map(rowToTransaction)
 }
 
+export async function listTransactionsByState(
+  state: TransactionState,
+  limit = TRANSACTIONS_PAGE_SIZE
+): Promise<Transaction[]> {
+  const database = await getDatabase()
+  const rows = await database.getAllAsync<TransactionRow>(
+    `SELECT ${COLUMNS} FROM transactions WHERE state = ? ORDER BY occurred_at DESC LIMIT ?`,
+    state,
+    limit
+  )
+
+  return rows.map(rowToTransaction)
+}
+
 export async function updateTransactionState(
   id: string,
   state: TransactionState

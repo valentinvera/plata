@@ -5,6 +5,7 @@ import {
   createTransaction,
   createTransactions,
   listTransactions,
+  listTransactionsByState,
   listTransactionsInRange,
   updateTransactionState,
 } from "./repository"
@@ -16,6 +17,20 @@ export function useTransactions() {
   return useQuery({
     queryFn: () => listTransactions(),
     queryKey: transactionsQueryKey,
+  })
+}
+
+export function useSuggestedTransactions() {
+  return useQuery({
+    queryFn: () => listTransactionsByState("suggested"),
+    queryKey: [...transactionsQueryKey, "state", "suggested"],
+  })
+}
+
+export function useConfirmedTransactions() {
+  return useQuery({
+    queryFn: () => listTransactionsByState("confirmed"),
+    queryKey: [...transactionsQueryKey, "state", "confirmed"],
   })
 }
 

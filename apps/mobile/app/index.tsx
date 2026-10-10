@@ -7,7 +7,8 @@ import { Container } from "@/components/container"
 import { getCategoryById } from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
 import {
-  useTransactions,
+  useConfirmedTransactions,
+  useSuggestedTransactions,
   useUpdateTransactionState,
 } from "@/src/features/transactions/hooks"
 import type { Transaction } from "@/src/features/transactions/types"
@@ -19,26 +20,31 @@ interface TransactionSection {
 }
 
 export default function TransactionsScreen() {
-  const { data, isError, isLoading, refetch } = useTransactions()
+  const {
+    data: suggestedData,
+    isError: suggestedError,
+    isLoading: suggestedLoading,
+    refetch: refetchSuggested,
+  } = useSuggestedTransactions()
+  const {
+    data: confirmedData,
+    isError: confirmedError,
+    isLoading: confirmedLoading,
+    refetch: refetchConfirmed,
+  } = useConfirmedTransactions()
   const updateState = useUpdateTransactionState()
-  const transactions = data ?? []
+
+  const isLoading = suggestedLoading || confirmedLoading
+  const isError = suggestedError || confirmedError
 
   const sections: TransactionSection[] = [
-    {
-      data: transactions.filter((item) => item.state === "suggested"),
-      title: "To confirm",
-      type: "suggested",
-    },
-    {
-      data: transactions.filter((item) => item.state === "confirmed"),
-      title: "Confirmed",
-      type: "confirmed",
-    },
+    { data: suggestedData ?? [], title: "To confirm", type: "suggested" },
+    { data: confirmedData ?? [], title: "Confirmed", type: "confirmed" },
   ]
 
   const handleRetry = useCallback(async () => {
-    await refetch()
-  }, [refetch])
+    await Promise.all([refetchSuggested(), refetchConfirmed()])
+  }, [refetchConfirmed, refetchSuggested])
 
   const handleAdd = useCallback(() => {
     router.push("/add-transaction")
