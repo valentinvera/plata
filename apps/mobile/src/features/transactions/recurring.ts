@@ -38,10 +38,17 @@ function median(values: readonly number[]): number {
 }
 
 function detectCadence(intervals: readonly number[]): RecurringCadence | null {
-  const medianDays = median(intervals) / DAY_MS
+  if (intervals.length === 0) {
+    return null
+  }
 
   for (const window of CADENCE_WINDOWS) {
-    if (Math.abs(medianDays - window.days) <= window.toleranceDays) {
+    const withinWindow = intervals.every((interval) => {
+      const days = interval / DAY_MS
+      return Math.abs(days - window.days) <= window.toleranceDays
+    })
+
+    if (withinWindow) {
       return window.cadence
     }
   }

@@ -76,6 +76,16 @@ describe("detectRecurring", () => {
     expect(detectRecurring(transactions)).toEqual([])
   })
 
+  it("ignores an average interval that no single interval matches", () => {
+    const transactions = [
+      makeTransaction({ id: "a", occurredAt: START }),
+      makeTransaction({ id: "b", occurredAt: START + 1 * DAY }),
+      makeTransaction({ id: "c", occurredAt: START + 60 * DAY }),
+    ]
+
+    expect(detectRecurring(transactions)).toEqual([])
+  })
+
   it("ignores unstable amounts", () => {
     const transactions = [
       makeTransaction({ amount: 1000, id: "a", occurredAt: START }),
