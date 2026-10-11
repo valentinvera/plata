@@ -1,41 +1,66 @@
-import { device, encryptedBlob, syncCursor } from "@plata/db/schema/sync"
-import { and, asc, eq, gt, sql } from "drizzle-orm"
+import { device, encryptedBlob } from "@plata/db/schema/sync"
+import { and, asc, eq, gt, or, type SQL, sql } from "drizzle-orm"
 
 import { protectedProcedure, router } from "../index"
-import { parseSince, pullInput, pushInput, toCursor } from "../sync"
+import {
+  decodeCursor,
+  encodeCursor,
+  pullInput,
+  pushInput,
+  type SyncBlobInput,
+} from "../sync"
 
 const PULL_LIMIT = 500
+
+function dedupeById(blobs: readonly SyncBlobInput[]): SyncBlobInput[] {
+  const byId = new Map<string, SyncBlobInput>()
+
+  for (const blob of blobs) {
+    byId.set(blob.id, blob)
+  }
+
+  return [...byId.values()]
+}
 
 export const syncRouter = router({
   pull: protectedProcedure.input(pullInput).query(async ({ ctx, input }) => {
     const userId = ctx.session.user.id
-    const since = parseSince(input?.since)
+    const cursor = decodeCursor(input?.since)
+
+    const conditions: (SQL | undefined)[] = [eq(encryptedBlob.userId, userId)]
+
+    if (cursor) {
+      conditions.push(
+        or(
+          gt(encryptedBlob.serverUpdatedAt, cursor.updatedAt),
+          and(
+            eq(encryptedBlob.serverUpdatedAt, cursor.updatedAt),
+            gt(encryptedBlob.id, cursor.id)
+          )
+        )
+      )
+    }
 
     const rows = await ctx.db
       .select()
       .from(encryptedBlob)
-      .where(
-        since
-          ? and(
-              eq(encryptedBlob.userId, userId),
-              gt(encryptedBlob.updatedAt, since)
-            )
-          : eq(encryptedBlob.userId, userId)
-      )
-      .orderBy(asc(encryptedBlob.updatedAt))
+      .where(and(...conditions))
+      .orderBy(asc(encryptedBlob.serverUpdatedAt), asc(encryptedBlob.id))
       .limit(PULL_LIMIT)
 
     const blobs = rows.map((row) => ({
       ciphertext: row.ciphertext.toString("base64"),
       deletedAt: row.deletedAt ? row.deletedAt.toISOString() : null,
       id: row.id,
-      updatedAt: row.updatedAt.toISOString(),
+      updatedAt: row.clientUpdatedAt.toISOString(),
     }))
 
-    const last = blobs.at(-1)
-    const cursor = last ? last.updatedAt : toCursor(since ?? new Date(0))
+    const last = rows.at(-1)
+    const nextCursor = last
+      ? encodeCursor({ id: last.id, updatedAt: last.serverUpdatedAt })
+      : (input?.since ?? null)
 
-    return { blobs, cursor }
+    return { blobs, cursor: nextCursor }
   }),
 
   push: protectedProcedure.input(pushInput).mutation(async ({ ctx, input }) => {
@@ -51,38 +76,35 @@ export const syncRouter = router({
         target: [device.userId, device.id],
       })
 
-    if (input.blobs.length > 0) {
+    const blobs = dedupeById(input.blobs)
+
+    if (blobs.length > 0) {
       await ctx.db
         .insert(encryptedBlob)
         .values(
-          input.blobs.map((blob) => ({
+          blobs.map((blob) => ({
             ciphertext: Buffer.from(blob.ciphertext, "base64"),
+            clientUpdatedAt: new Date(blob.updatedAt),
             deletedAt: blob.deletedAt ? new Date(blob.deletedAt) : null,
             id: blob.id,
-            updatedAt: new Date(blob.updatedAt),
             userId,
           }))
         )
+        // Last-write-wins on the client logical time; ties favor the incoming
+        // copy so replays stay deterministic. Stale pushes never bump the
+        // server revision, so they cannot hide newer data from pull.
         .onConflictDoUpdate({
           set: {
             ciphertext: sql`excluded.ciphertext`,
+            clientUpdatedAt: sql`excluded.client_updated_at`,
             deletedAt: sql`excluded.deleted_at`,
-            updatedAt: sql`excluded.updated_at`,
+            serverUpdatedAt: sql`now()`,
           },
+          setWhere: sql`excluded.client_updated_at >= ${encryptedBlob.clientUpdatedAt}`,
           target: [encryptedBlob.userId, encryptedBlob.id],
         })
     }
 
-    const cursor = toCursor(now)
-
-    await ctx.db
-      .insert(syncCursor)
-      .values({ cursor, deviceId: input.deviceId, updatedAt: now, userId })
-      .onConflictDoUpdate({
-        set: { cursor, updatedAt: now },
-        target: [syncCursor.userId, syncCursor.deviceId],
-      })
-
-    return { applied: input.blobs.length, cursor }
+    return { applied: blobs.length }
   }),
 })

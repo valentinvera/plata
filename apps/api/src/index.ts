@@ -1,6 +1,7 @@
 import { trpcServer } from "@hono/trpc-server"
 import { appRouter } from "@plata/trpc/routers/index"
 import { Hono } from "hono"
+import { bodyLimit } from "hono/body-limit"
 import { cors } from "hono/cors"
 import { logger } from "hono/logger"
 
@@ -22,6 +23,15 @@ app.use(
 )
 
 app.on(["POST", "GET"], "/api/auth/*", async (c) => auth.handler(c.req.raw))
+
+// Reject oversized bodies before they reach the sync router.
+app.use(
+  "/trpc/*",
+  bodyLimit({
+    maxSize: 8 * 1024 * 1024,
+    onError: (c) => c.json({ error: "Payload too large" }, 413),
+  })
+)
 
 app.use(
   "/trpc/*",

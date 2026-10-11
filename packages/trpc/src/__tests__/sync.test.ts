@@ -1,19 +1,22 @@
 import { describe, expect, it } from "bun:test"
 
-import { parseSince, pullInput, pushInput, toCursor } from "../sync"
+import { decodeCursor, encodeCursor, pullInput, pushInput } from "../sync"
 
 const UPDATED_AT = "2026-01-01T12:00:00.000Z"
+
+function blob(overrides: Record<string, unknown> = {}) {
+  return {
+    ciphertext: Buffer.from("secret").toString("base64"),
+    id: "tx-1",
+    updatedAt: UPDATED_AT,
+    ...overrides,
+  }
+}
 
 describe("pushInput", () => {
   it("accepts a valid encrypted payload", () => {
     const result = pushInput.safeParse({
-      blobs: [
-        {
-          ciphertext: Buffer.from("secret").toString("base64"),
-          id: "tx-1",
-          updatedAt: UPDATED_AT,
-        },
-      ],
+      blobs: [blob()],
       deviceId: "device-1",
     })
 
@@ -22,14 +25,7 @@ describe("pushInput", () => {
 
   it("accepts a tombstone with a deletion timestamp", () => {
     const result = pushInput.safeParse({
-      blobs: [
-        {
-          ciphertext: "AA==",
-          deletedAt: UPDATED_AT,
-          id: "tx-1",
-          updatedAt: UPDATED_AT,
-        },
-      ],
+      blobs: [blob({ ciphertext: "AA==", deletedAt: UPDATED_AT })],
       deviceId: "device-1",
     })
 
@@ -38,7 +34,7 @@ describe("pushInput", () => {
 
   it("rejects an empty ciphertext", () => {
     const result = pushInput.safeParse({
-      blobs: [{ ciphertext: "", id: "tx-1", updatedAt: UPDATED_AT }],
+      blobs: [blob({ ciphertext: "" })],
       deviceId: "device-1",
     })
 
@@ -47,9 +43,7 @@ describe("pushInput", () => {
 
   it("rejects a blob whose ciphertext is not base64", () => {
     const result = pushInput.safeParse({
-      blobs: [
-        { ciphertext: "not base64!!", id: "tx-1", updatedAt: UPDATED_AT },
-      ],
+      blobs: [blob({ ciphertext: "not base64!!" })],
       deviceId: "device-1",
     })
 
@@ -58,7 +52,7 @@ describe("pushInput", () => {
 
   it("rejects a blob without a valid updatedAt", () => {
     const result = pushInput.safeParse({
-      blobs: [{ ciphertext: "AA==", id: "tx-1", updatedAt: "yesterday" }],
+      blobs: [blob({ updatedAt: "yesterday" })],
       deviceId: "device-1",
     })
 
@@ -66,8 +60,36 @@ describe("pushInput", () => {
   })
 
   it("rejects a payload without a device", () => {
+    expect(pushInput.safeParse({ blobs: [] }).success).toBe(false)
+  })
+
+  it("rejects a ciphertext over the per-blob cap", () => {
     const result = pushInput.safeParse({
-      blobs: [],
+      blobs: [blob({ ciphertext: "A".repeat(120_000) })],
+      deviceId: "device-1",
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects more blobs than the batch cap", () => {
+    const result = pushInput.safeParse({
+      blobs: Array.from({ length: 101 }, (_, index) =>
+        blob({ id: `tx-${index}` })
+      ),
+      deviceId: "device-1",
+    })
+
+    expect(result.success).toBe(false)
+  })
+
+  it("rejects a payload over the total size cap", () => {
+    const big = "A".repeat(60_000)
+    const result = pushInput.safeParse({
+      blobs: Array.from({ length: 100 }, (_, index) =>
+        blob({ ciphertext: big, id: `tx-${index}` })
+      ),
+      deviceId: "device-1",
     })
 
     expect(result.success).toBe(false)
@@ -83,25 +105,35 @@ describe("pullInput", () => {
     expect(pullInput.safeParse(undefined).success).toBe(true)
   })
 
-  it("accepts a cursor", () => {
-    expect(pullInput.safeParse({ since: UPDATED_AT }).success).toBe(true)
+  it("accepts an opaque cursor", () => {
+    expect(pullInput.safeParse({ since: "1234:tx-1" }).success).toBe(true)
   })
 
-  it("rejects an invalid cursor", () => {
-    expect(pullInput.safeParse({ since: "nope" }).success).toBe(false)
+  it("rejects an empty cursor", () => {
+    expect(pullInput.safeParse({ since: "" }).success).toBe(false)
   })
 })
 
 describe("cursor helpers", () => {
-  it("round-trips a date through toCursor and parseSince", () => {
+  it("round-trips a cursor", () => {
     const date = new Date(UPDATED_AT)
+    const cursor = { id: "tx:1/with weird chars", updatedAt: date }
+    const decoded = decodeCursor(encodeCursor(cursor))
 
-    expect(parseSince(toCursor(date))?.getTime()).toBe(date.getTime())
+    expect(decoded?.id).toBe(cursor.id)
+    expect(decoded?.updatedAt.getTime()).toBe(date.getTime())
   })
 
   it("returns null for a missing cursor", () => {
-    expect(parseSince(null)).toBeNull()
-    expect(parseSince(undefined)).toBeNull()
-    expect(parseSince("")).toBeNull()
+    expect(decodeCursor(null)).toBeNull()
+    expect(decodeCursor(undefined)).toBeNull()
+    expect(decodeCursor("")).toBeNull()
+  })
+
+  it("returns null for a malformed cursor", () => {
+    expect(decodeCursor("no-separator")).toBeNull()
+    expect(decodeCursor(":tx-1")).toBeNull()
+    expect(decodeCursor("not-a-number:tx-1")).toBeNull()
+    expect(decodeCursor("1234:")).toBeNull()
   })
 })
