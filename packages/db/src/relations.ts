@@ -1,7 +1,7 @@
 import { defineRelations } from "drizzle-orm"
 
 import { account, authRelations, session, user, verification } from "./schema"
-import { device, encryptedBlob, syncCursor } from "./schema/sync"
+import { device, encryptedBlob } from "./schema/sync"
 
 export const relations = {
   ...defineRelations({
@@ -9,7 +9,6 @@ export const relations = {
     device,
     encryptedBlob,
     session,
-    syncCursor,
     user,
     verification,
   }),

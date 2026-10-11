@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "194b8488-fede-499d-a977-52b91841a5ca",
+  "id": "c0f7dd4f-9d1e-4f54-b355-9f143c352778",
   "prevIds": ["00000000-0000-0000-0000-000000000000"],
   "ddl": [
     {
@@ -37,12 +37,6 @@
     {
       "isRlsEnabled": false,
       "name": "encrypted_blobs",
-      "entityType": "tables",
-      "schema": "public"
-    },
-    {
-      "isRlsEnabled": false,
-      "name": "sync_cursors",
       "entityType": "tables",
       "schema": "public"
     },
@@ -556,6 +550,19 @@
     {
       "type": "timestamp",
       "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "client_updated_at",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "encrypted_blobs"
+    },
+    {
+      "type": "timestamp",
+      "typeSchema": null,
       "notNull": false,
       "dimensions": 0,
       "default": null,
@@ -587,7 +594,7 @@
       "default": "now()",
       "generated": null,
       "identity": null,
-      "name": "updated_at",
+      "name": "server_updated_at",
       "entityType": "columns",
       "schema": "public",
       "table": "encrypted_blobs"
@@ -604,58 +611,6 @@
       "entityType": "columns",
       "schema": "public",
       "table": "encrypted_blobs"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": false,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "cursor",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "sync_cursors"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "device_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "sync_cursors"
-    },
-    {
-      "type": "timestamp",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": "now()",
-      "generated": null,
-      "identity": null,
-      "name": "updated_at",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "sync_cursors"
-    },
-    {
-      "type": "text",
-      "typeSchema": null,
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "user_id",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "sync_cursors"
     },
     {
       "nameExplicit": true,
@@ -752,7 +707,14 @@
           "opclass": null
         },
         {
-          "value": "updated_at",
+          "value": "server_updated_at",
+          "isExpression": false,
+          "asc": true,
+          "nullsFirst": false,
+          "opclass": null
+        },
+        {
+          "value": "id",
           "isExpression": false,
           "asc": true,
           "nullsFirst": false,
@@ -764,7 +726,7 @@
       "with": "",
       "method": "btree",
       "concurrently": false,
-      "name": "encrypted_blobs_userId_updatedAt_idx",
+      "name": "encrypted_blobs_userId_serverUpdatedAt_idx",
       "entityType": "indexes",
       "schema": "public",
       "table": "encrypted_blobs"
@@ -822,19 +784,6 @@
       "table": "encrypted_blobs"
     },
     {
-      "nameExplicit": false,
-      "columns": ["user_id", "device_id"],
-      "schemaTo": "public",
-      "tableTo": "devices",
-      "columnsTo": ["user_id", "id"],
-      "onUpdate": "NO ACTION",
-      "onDelete": "CASCADE",
-      "name": "sync_cursors_user_id_device_id_devices_user_id_id_fkey",
-      "entityType": "fks",
-      "schema": "public",
-      "table": "sync_cursors"
-    },
-    {
       "columns": ["user_id", "id"],
       "nameExplicit": false,
       "name": "devices_pkey",
@@ -849,14 +798,6 @@
       "entityType": "pks",
       "schema": "public",
       "table": "encrypted_blobs"
-    },
-    {
-      "columns": ["user_id", "device_id"],
-      "nameExplicit": false,
-      "name": "sync_cursors_pkey",
-      "entityType": "pks",
-      "schema": "public",
-      "table": "sync_cursors"
     },
     {
       "columns": ["id"],

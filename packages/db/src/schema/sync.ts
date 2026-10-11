@@ -1,6 +1,5 @@
 import {
   bytea,
-  foreignKey,
   index,
   pgTable,
   primaryKey,
@@ -35,35 +34,22 @@ export const encryptedBlob = pgTable(
   "encrypted_blobs",
   {
     ciphertext: bytea("ciphertext").notNull(),
+    // Client logical time, used only for last-write-wins conflict resolution.
+    clientUpdatedAt: timestamp("client_updated_at").notNull(),
     deletedAt: timestamp("deleted_at"),
     id: text("id").notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    // Server-assigned ordering for the pull cursor, immune to device clocks.
+    serverUpdatedAt: timestamp("server_updated_at").defaultNow().notNull(),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
   },
   (table) => [
     primaryKey({ columns: [table.userId, table.id] }),
-    index("encrypted_blobs_userId_updatedAt_idx").on(
+    index("encrypted_blobs_userId_serverUpdatedAt_idx").on(
       table.userId,
-      table.updatedAt
+      table.serverUpdatedAt,
+      table.id
     ),
-  ]
-)
-
-export const syncCursor = pgTable(
-  "sync_cursors",
-  {
-    cursor: text("cursor"),
-    deviceId: text("device_id").notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    userId: text("user_id").notNull(),
-  },
-  (table) => [
-    primaryKey({ columns: [table.userId, table.deviceId] }),
-    foreignKey({
-      columns: [table.userId, table.deviceId],
-      foreignColumns: [device.userId, device.id],
-    }).onDelete("cascade"),
   ]
 )

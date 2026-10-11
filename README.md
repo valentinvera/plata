@@ -71,11 +71,20 @@ bun install
 ### Base de datos (auth / sync)
 
 1. Configurá `DATABASE_URL` en `apps/api/.env`.
-2. Aplicá el schema:
+2. Aplicá el schema. Para desarrollo rápido, Drizzle sincroniza el schema directo:
 
 ```bash
 bun run db:push
 ```
+
+Para entornos versionados usá las migraciones:
+
+```bash
+bun run db:migrate
+```
+
+La migración inicial es idempotente, así que también se puede aplicar sobre una base ya
+creada con `db:push`.
 
 ### Desarrollo
 
