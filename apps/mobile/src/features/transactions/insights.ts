@@ -24,12 +24,13 @@ function changeRatio(current: number, previous: number): number | null {
 }
 
 function expenseTotals(
-  transactions: readonly Transaction[]
+  transactions: readonly Transaction[],
+  currency: Currency
 ): Map<string, number> {
   const totals = new Map<string, number>()
 
   for (const transaction of transactions) {
-    if (transaction.kind !== "expense") {
+    if (transaction.kind !== "expense" || transaction.currency !== currency) {
       continue
     }
 
@@ -77,13 +78,15 @@ export function comparePeriods(
   })
 }
 
-// Per-category expense movement between two periods, most changed first.
+// Per-category expense movement between two periods for one currency, most
+// changed first.
 export function categoryChanges(
   current: readonly Transaction[],
-  previous: readonly Transaction[]
+  previous: readonly Transaction[],
+  currency: Currency
 ): CategoryChange[] {
-  const currentTotals = expenseTotals(current)
-  const previousTotals = expenseTotals(previous)
+  const currentTotals = expenseTotals(current, currency)
+  const previousTotals = expenseTotals(previous, currency)
   const categoryIds = new Set([
     ...currentTotals.keys(),
     ...previousTotals.keys(),
@@ -106,10 +109,14 @@ export function categoryChanges(
 
 export function largestExpenses(
   transactions: readonly Transaction[],
+  currency: Currency,
   limit = DEFAULT_TOP_EXPENSES
 ): Transaction[] {
   return [...transactions]
-    .filter((transaction) => transaction.kind === "expense")
+    .filter(
+      (transaction) =>
+        transaction.kind === "expense" && transaction.currency === currency
+    )
     .sort((a, b) => b.amount - a.amount)
     .slice(0, limit)
 }

@@ -78,7 +78,7 @@ describe("categoryChanges", () => {
       makeTransaction({ amount: 7000, categoryId: "food" }),
     ]
 
-    expect(categoryChanges(current, previous)).toEqual([
+    expect(categoryChanges(current, previous, "ARS")).toEqual([
       {
         categoryId: "groceries",
         current: 6000,
@@ -92,9 +92,17 @@ describe("categoryChanges", () => {
   it("includes categories present in only one period", () => {
     const current = [makeTransaction({ amount: 2000, categoryId: "health" })]
 
-    expect(categoryChanges(current, [])).toEqual([
+    expect(categoryChanges(current, [], "ARS")).toEqual([
       { categoryId: "health", current: 2000, delta: 2000, previous: 0 },
     ])
+  })
+
+  it("ignores transactions in another currency", () => {
+    const current = [
+      makeTransaction({ amount: 2000, categoryId: "health", currency: "USD" }),
+    ]
+
+    expect(categoryChanges(current, [], "ARS")).toEqual([])
   })
 })
 
@@ -107,16 +115,25 @@ describe("largestExpenses", () => {
   ]
 
   it("returns the biggest expenses and ignores income", () => {
-    expect(largestExpenses(transactions).map((item) => item.id)).toEqual([
-      "b",
-      "c",
-      "a",
-    ])
+    expect(largestExpenses(transactions, "ARS").map((item) => item.id)).toEqual(
+      ["b", "c", "a"]
+    )
   })
 
   it("honors the limit", () => {
-    expect(largestExpenses(transactions, 1).map((item) => item.id)).toEqual([
-      "b",
+    expect(
+      largestExpenses(transactions, "ARS", 1).map((item) => item.id)
+    ).toEqual(["b"])
+  })
+
+  it("ranks within a single currency", () => {
+    const mixed = [
+      makeTransaction({ amount: 10_000, currency: "ARS", id: "ars" }),
+      makeTransaction({ amount: 100, currency: "USD", id: "usd" }),
+    ]
+
+    expect(largestExpenses(mixed, "USD").map((item) => item.id)).toEqual([
+      "usd",
     ])
   })
 })
