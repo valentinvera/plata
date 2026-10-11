@@ -4,7 +4,11 @@ import { findDuplicateGroups } from "../duplicates"
 import type { Transaction } from "../types"
 
 const MINUTE = 60 * 1000
-const START = Date.UTC(2026, 0, 1)
+// Local 09:00 keeps the base timestamp precise (not the noon placeholder used
+// for date-only inputs) regardless of the machine timezone.
+const START = new Date(2026, 0, 1, 9, 0, 0, 0).getTime()
+// Local noon is the placeholder the parser stores when only a date is known.
+const NOON = new Date(2026, 0, 1, 12, 0, 0, 0).getTime()
 
 function makeTransaction(overrides: Partial<Transaction>): Transaction {
   return {
@@ -57,6 +61,35 @@ describe("findDuplicateGroups", () => {
     ])
 
     expect(groups).toEqual([])
+  })
+
+  it("ignores transactions without a merchant", () => {
+    const groups = findDuplicateGroups([
+      makeTransaction({ id: "a", merchant: null }),
+      makeTransaction({ id: "b", merchant: null, occurredAt: START + MINUTE }),
+    ])
+
+    expect(groups).toEqual([])
+  })
+
+  it("does not collapse date-only transactions sharing the noon placeholder", () => {
+    const groups = findDuplicateGroups([
+      makeTransaction({ id: "a", occurredAt: NOON }),
+      makeTransaction({ id: "b", occurredAt: NOON }),
+    ])
+
+    expect(groups).toEqual([])
+  })
+
+  it("groups date-only transactions only when the raw input matches", () => {
+    const groups = findDuplicateGroups([
+      makeTransaction({ id: "a", occurredAt: NOON, rawRef: "Compraste $50" }),
+      makeTransaction({ id: "b", occurredAt: NOON, rawRef: "Compraste $50" }),
+      makeTransaction({ id: "c", occurredAt: NOON, rawRef: "Otro $50" }),
+    ])
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0].transactions.map((item) => item.id)).toEqual(["a", "b"])
   })
 
   it("chains consecutive transactions into one group", () => {

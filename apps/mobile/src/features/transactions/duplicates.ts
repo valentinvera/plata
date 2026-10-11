@@ -11,12 +11,54 @@ export interface DuplicateGroup {
 // avoid flagging two genuine purchases.
 const DEFAULT_WINDOW_MS = 5 * 60 * 1000
 
-function groupKey(transaction: Transaction): string {
+// Date-only inputs (e.g. "05/09") are parsed to noon on that day because the
+// real time is unknown. Noon is a placeholder, not an observation, so the
+// short window cannot tell two of these apart.
+const DAY_COARSE_HOUR = 12
+
+function isDayCoarse(occurredAt: number): boolean {
+  const date = new Date(occurredAt)
+
+  return (
+    date.getHours() === DAY_COARSE_HOUR &&
+    date.getMinutes() === 0 &&
+    date.getSeconds() === 0 &&
+    date.getMilliseconds() === 0
+  )
+}
+
+// A merchant is required to build a duplicate key: without it, unrelated
+// transactions that only share amount, currency and kind would collide.
+function groupKey(transaction: Transaction): string | null {
   const merchant = transaction.merchant
     ? normalizeText(transaction.merchant)
     : ""
 
+  if (!merchant) {
+    return null
+  }
+
   return `${transaction.currency}|${transaction.kind}|${transaction.amount}|${merchant}`
+}
+
+// Two transactions are candidates for the same event when they share an
+// identical raw input, or when both carry a precise timestamp within the
+// window. Day-coarse timestamps fall back to the raw-input signal because the
+// short window cannot discriminate them.
+function isSameEvent(
+  previous: Transaction,
+  current: Transaction,
+  windowMs: number
+): boolean {
+  if (previous.rawRef !== null && previous.rawRef === current.rawRef) {
+    return true
+  }
+
+  if (isDayCoarse(previous.occurredAt) || isDayCoarse(current.occurredAt)) {
+    return false
+  }
+
+  return current.occurredAt - previous.occurredAt <= windowMs
 }
 
 // Groups transactions that look like the same event: same amount, currency,
@@ -29,6 +71,11 @@ export function findDuplicateGroups(
 
   for (const transaction of transactions) {
     const key = groupKey(transaction)
+
+    if (key === null) {
+      continue
+    }
+
     const bucket = byKey.get(key)
 
     if (bucket) {
@@ -52,7 +99,7 @@ export function findDuplicateGroups(
       const previous = ordered[index - 1]
       const current = ordered[index]
 
-      if (current.occurredAt - previous.occurredAt <= windowMs) {
+      if (isSameEvent(previous, current, windowMs)) {
         cluster.push(current)
       } else {
         if (cluster.length >= 2) {
