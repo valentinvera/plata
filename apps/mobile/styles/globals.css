@@ -3,15 +3,16 @@
 @import "heroui-native/styles";
 
 /* Plata brand palette (brand/tokens.json) mapped onto HeroUI Native tokens.
-   Mint #12B886 is light, so the foregrounds use the brand ink #10221C for
-   readable contrast instead of the default near-white. */
+   Light mode uses the darker green #0E7C5A so the filled selection state keeps
+   >=3:1 contrast against white; dark mode uses the brand mint #12B886 with the
+   brand ink #10221C foreground for readable contrast. */
 @layer theme {
   @variant light {
-    --accent: oklch(0.6946 0.1435 164.88);
-    --accent-foreground: oklch(0.234 0.0268 170.56);
+    --accent: oklch(0.5212 0.1058 165.17);
+    --accent-foreground: oklch(1 0 0);
 
-    --success: oklch(0.6946 0.1435 164.88);
-    --success-foreground: oklch(0.234 0.0268 170.56);
+    --success: oklch(0.5212 0.1058 165.17);
+    --success-foreground: oklch(1 0 0);
 
     --danger: oklch(0.7091 0.1835 28.37);
     --danger-foreground: oklch(0.234 0.0268 170.56);
