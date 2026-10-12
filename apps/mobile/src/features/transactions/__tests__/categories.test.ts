@@ -61,4 +61,16 @@ describe("categorize with custom categories", () => {
         .categoryId
     ).toBe("pets")
   })
+
+  it("lets a custom category win a keyword tie with a built-in", () => {
+    const work: Category = {
+      id: "work",
+      keywords: ["uber"],
+      name: "Trabajo",
+    }
+
+    expect(
+      categorize("Viaje uber", [work, ...DEFAULT_CATEGORIES]).categoryId
+    ).toBe("work")
+  })
 })

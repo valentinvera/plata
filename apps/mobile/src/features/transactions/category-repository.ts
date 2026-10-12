@@ -42,9 +42,10 @@ export async function listCustomCategories(): Promise<Category[]> {
   return rows.map(rowToCategory)
 }
 
-// The effective list: the built-in categories plus the user's own.
+// The effective list: the user's own categories first (so they win keyword
+// ties against the built-ins), then the built-in ones.
 export async function listCategories(): Promise<Category[]> {
-  return [...DEFAULT_CATEGORIES, ...(await listCustomCategories())]
+  return [...(await listCustomCategories()), ...DEFAULT_CATEGORIES]
 }
 
 export interface CategoryInput {
