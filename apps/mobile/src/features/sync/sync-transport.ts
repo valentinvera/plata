@@ -22,6 +22,12 @@ export interface SyncApiClient {
     reserveKey: {
       mutate: (input: { keyId: string }) => Promise<{ keyId: string }>
     }
+    storeRecovery: {
+      mutate: (input: { wrappedKey: string }) => Promise<{ stored: boolean }>
+    }
+    getRecovery: {
+      query: () => Promise<{ wrappedKey: string | null }>
+    }
   }
 }
 

@@ -32,6 +32,8 @@ function createClient(
         mutate: (input) =>
           Promise.resolve({ keyId: reservedKeyId ?? input.keyId }),
       },
+      storeRecovery: { mutate: () => Promise.resolve({ stored: true }) },
+      getRecovery: { query: () => Promise.resolve({ wrappedKey: null }) },
     },
   }
 }

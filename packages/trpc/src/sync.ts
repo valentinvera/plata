@@ -44,6 +44,10 @@ export const reserveKeyInput = z.object({
   keyId: z.string().min(1).max(128),
 })
 
+export const storeRecoveryInput = z.object({
+  wrappedKey: z.base64().min(1).max(1024),
+})
+
 export type PushInput = z.infer<typeof pushInput>
 export type PullInput = z.infer<typeof pullInput>
 export type SyncBlobInput = z.infer<typeof blobInput>

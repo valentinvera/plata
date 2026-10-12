@@ -29,6 +29,8 @@ describe("createSyncTransport", () => {
         reserveKey: {
           mutate: (input) => Promise.resolve({ keyId: input.keyId }),
         },
+        storeRecovery: { mutate: () => Promise.resolve({ stored: true }) },
+        getRecovery: { query: () => Promise.resolve({ wrappedKey: null }) },
       },
     }
 
@@ -54,6 +56,8 @@ describe("createSyncTransport", () => {
         reserveKey: {
           mutate: (input) => Promise.resolve({ keyId: input.keyId }),
         },
+        storeRecovery: { mutate: () => Promise.resolve({ stored: true }) },
+        getRecovery: { query: () => Promise.resolve({ wrappedKey: null }) },
       },
     }
 
