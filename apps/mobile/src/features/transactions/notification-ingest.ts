@@ -1,3 +1,4 @@
+import { listCategories } from "./category-repository"
 import {
   buildNotificationTransaction,
   notificationTransactionId,
@@ -12,7 +13,11 @@ export async function ingestNotification(raw: string): Promise<boolean> {
     return false
   }
 
-  const transaction = buildNotificationTransaction(payload)
+  const transaction = buildNotificationTransaction(
+    payload,
+    Date.now(),
+    await listCategories()
+  )
 
   if (!transaction) {
     return false

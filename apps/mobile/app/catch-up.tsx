@@ -9,9 +9,15 @@ import {
   isSuggestionValid,
   splitCatchUpTexts,
 } from "@/src/features/transactions/catchup"
-import { getCategoryById } from "@/src/features/transactions/categories"
+import {
+  DEFAULT_CATEGORIES,
+  getCategoryById,
+} from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
-import { useCreateTransactions } from "@/src/features/transactions/hooks"
+import {
+  useCategories,
+  useCreateTransactions,
+} from "@/src/features/transactions/hooks"
 import type {
   NewTransaction,
   TransactionState,
@@ -24,10 +30,13 @@ export default function CatchUpScreen() {
   const [text, setText] = useState("")
   const [error, setError] = useState<string | null>(null)
   const createTransactions = useCreateTransactions()
+  const { data: categoriesData } = useCategories()
+  const categories = categoriesData ?? DEFAULT_CATEGORIES
 
   const suggestions = useMemo(
-    () => buildCatchUpSuggestions(splitCatchUpTexts(text)),
-    [text]
+    () =>
+      buildCatchUpSuggestions(splitCatchUpTexts(text), Date.now(), categories),
+    [categories, text]
   )
   const valid = suggestions.filter(isSuggestionValid)
   const skipped = suggestions.length - valid.length
@@ -106,7 +115,7 @@ export default function CatchUpScreen() {
             >
               <Text className="text-foreground">
                 {suggestion.merchant ??
-                  getCategoryById(suggestion.categoryId).name}
+                  getCategoryById(suggestion.categoryId, categories).name}
               </Text>
               <Text className="text-muted text-sm">
                 {formatAmount(suggestion.amount, suggestion.currency)}

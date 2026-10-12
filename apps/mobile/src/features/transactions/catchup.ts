@@ -1,7 +1,8 @@
+import { DEFAULT_CATEGORIES } from "./categories"
 import { categorize } from "./categorizer"
 import { createId } from "./id"
 import { parseTransactionText } from "./parser"
-import type { Currency, TransactionKind } from "./types"
+import type { Category, Currency, TransactionKind } from "./types"
 
 export interface CatchUpSuggestion {
   amount: number | null
@@ -32,7 +33,8 @@ export function isSuggestionValid(
 
 export function buildCatchUpSuggestions(
   texts: readonly string[],
-  now: number = Date.now()
+  now: number = Date.now(),
+  categories: readonly Category[] = DEFAULT_CATEGORIES
 ): CatchUpSuggestion[] {
   const suggestions: CatchUpSuggestion[] = []
 
@@ -43,7 +45,10 @@ export function buildCatchUpSuggestions(
     }
 
     const parsed = parseTransactionText(text, now)
-    const categorization = categorize(`${text} ${parsed.merchant ?? ""}`)
+    const categorization = categorize(
+      `${text} ${parsed.merchant ?? ""}`,
+      categories
+    )
 
     suggestions.push({
       amount: parsed.amount,

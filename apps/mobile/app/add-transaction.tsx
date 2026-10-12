@@ -16,6 +16,7 @@ import { categorize } from "@/src/features/transactions/categorizer"
 import { formatAmount } from "@/src/features/transactions/format"
 import {
   useAccounts,
+  useCategories,
   useCreateTransaction,
 } from "@/src/features/transactions/hooks"
 import { recognizeTransactionText } from "@/src/features/transactions/ocr-recognize"
@@ -33,20 +34,25 @@ export default function AddTransactionScreen() {
   const [isImporting, setIsImporting] = useState(false)
   const createTransaction = useCreateTransaction()
   const { data: accountsData } = useAccounts()
+  const { data: categoriesData } = useCategories()
 
   const accounts = accountsData ?? []
+  const categories = categoriesData ?? DEFAULT_CATEGORIES
   const selectedAccountId = accountId ?? accounts[0]?.id ?? null
 
   const preview = useMemo(() => {
     const parsed = parseTransactionText(text)
-    const categorization = categorize(`${text} ${parsed.merchant ?? ""}`)
+    const categorization = categorize(
+      `${text} ${parsed.merchant ?? ""}`,
+      categories
+    )
 
     return {
       ...parsed,
       categoryId: categoryOverride ?? categorization.categoryId,
       confidence: categorization.confidence,
     }
-  }, [categoryOverride, text])
+  }, [categories, categoryOverride, text])
 
   // Accounts load asynchronously; require a resolved account so a transaction is
   // never stored without one (e.g. saving right after a share intent cold open).
@@ -186,7 +192,7 @@ export default function AddTransactionScreen() {
           Merchant: {preview.merchant ?? "—"}
         </Text>
         <Text className="text-foreground">
-          Category: {getCategoryById(preview.categoryId).name}
+          Category: {getCategoryById(preview.categoryId, categories).name}
         </Text>
         <Text className="mt-1 text-muted text-xs">
           Confidence: {preview.confidence.toFixed(2)}
@@ -215,7 +221,7 @@ export default function AddTransactionScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
         >
-          {DEFAULT_CATEGORIES.map((category) => (
+          {categories.map((category) => (
             <Chip
               key={category.id}
               onPress={() => setCategoryOverride(category.id)}

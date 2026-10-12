@@ -47,6 +47,14 @@ CREATE TABLE IF NOT EXISTS app_meta (
   key TEXT PRIMARY KEY NOT NULL,
   value TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY NOT NULL,
+  name TEXT NOT NULL,
+  keywords TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
 `
 
 let databasePromise: Promise<SQLiteDatabase> | null = null

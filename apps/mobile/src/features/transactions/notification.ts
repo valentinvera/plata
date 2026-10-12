@@ -1,7 +1,8 @@
+import { DEFAULT_CATEGORIES } from "./categories"
 import { categorize } from "./categorizer"
 import { parseTransactionText } from "./parser"
 import { containsKeyword, normalizeText } from "./text"
-import type { NewTransaction } from "./types"
+import type { Category, NewTransaction } from "./types"
 
 export interface NotificationPayload {
   app: string
@@ -96,7 +97,8 @@ export function notificationTransactionId(
 
 export function buildNotificationTransaction(
   payload: NotificationPayload,
-  now: number = Date.now()
+  now: number = Date.now(),
+  categories: readonly Category[] = DEFAULT_CATEGORIES
 ): NewTransaction | null {
   const text = notificationText(payload)
 
@@ -110,7 +112,10 @@ export function buildNotificationTransaction(
     return null
   }
 
-  const categorization = categorize(`${text} ${parsed.merchant ?? ""}`)
+  const categorization = categorize(
+    `${text} ${parsed.merchant ?? ""}`,
+    categories
+  )
 
   return {
     accountId: null,
