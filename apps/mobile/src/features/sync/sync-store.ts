@@ -15,7 +15,18 @@ const SELECT_COLUMNS = `${TRANSACTION_COLUMNS}, deleted_at, synced_at`
 // A row is pending upload when it changed after the last acknowledged sync.
 const DIRTY_WHERE = "synced_at IS NULL OR synced_at < updated_at"
 
-const UPSERT_SQL = `INSERT OR REPLACE INTO transactions (${SELECT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+const COLUMN_LIST = SELECT_COLUMNS.split(", ")
+const UPSERT_COLUMNS = COLUMN_LIST.join(", ")
+const UPSERT_PLACEHOLDERS = COLUMN_LIST.map(() => "?").join(", ")
+const UPSERT_ASSIGNMENTS = COLUMN_LIST.filter((column) => column !== "id")
+  .map((column) => `${column} = excluded.${column}`)
+  .join(", ")
+// The WHERE clause closes the race where the user edits a row after conflict
+// resolution but before this write: a stale remote snapshot never wins.
+const UPSERT_SQL = `INSERT INTO transactions (${UPSERT_COLUMNS}) VALUES (${UPSERT_PLACEHOLDERS}) ON CONFLICT(id) DO UPDATE SET ${UPSERT_ASSIGNMENTS} WHERE excluded.updated_at >= transactions.updated_at`
+
+const TOMBSTONE_SQL =
+  "UPDATE transactions SET deleted_at = ?, updated_at = ?, synced_at = ? WHERE id = ? AND updated_at <= ?"
 
 interface SyncRow extends TransactionRow {
   deleted_at: number | null
@@ -75,11 +86,12 @@ async function applyRemote(
 ): Promise<void> {
   if (record.deletedAt !== null) {
     await database.runAsync(
-      "UPDATE transactions SET deleted_at = ?, updated_at = ?, synced_at = ? WHERE id = ?",
+      TOMBSTONE_SQL,
       record.deletedAt,
       record.updatedAt,
       record.updatedAt,
-      record.id
+      record.id,
+      record.updatedAt
     )
 
     return
@@ -113,17 +125,19 @@ async function applyRemote(
   )
 }
 
-export function createTransactionSyncStore(): SyncStore {
+export function createTransactionSyncStore(userId: string): SyncStore {
+  const cursorKey = `${CURSOR_KEY}:${userId}`
+
   return {
     applyRemote: async (record) => applyRemote(await getDatabase(), record),
     getCursor: async () => {
-      const value = await getAppMeta(CURSOR_KEY)
+      const value = await getAppMeta(cursorKey)
 
       return value && value.length > 0 ? value : null
     },
     getRecord: async (id) => getRecord(await getDatabase(), id),
     listDirty: async () => listDirty(await getDatabase()),
     markSynced: async (versions) => markSynced(await getDatabase(), versions),
-    setCursor: (cursor) => setAppMeta(CURSOR_KEY, cursor ?? ""),
+    setCursor: (cursor) => setAppMeta(cursorKey, cursor ?? ""),
   }
 }
