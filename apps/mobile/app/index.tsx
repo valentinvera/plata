@@ -106,6 +106,10 @@ export default function TransactionsScreen() {
     router.push("/accounts")
   }, [])
 
+  const handleAccount = useCallback(() => {
+    router.push("/account")
+  }, [])
+
   const handleNotifications = useCallback(() => {
     router.push("/notifications")
   }, [])
@@ -185,6 +189,9 @@ export default function TransactionsScreen() {
       </Button>
       <Button className="mt-2" onPress={handleAccounts} variant="outline">
         <Button.Label>Accounts</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handleAccount} variant="outline">
+        <Button.Label>Account</Button.Label>
       </Button>
       {Platform.OS === "android" ? (
         <Button
