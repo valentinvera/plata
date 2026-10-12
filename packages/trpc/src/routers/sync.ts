@@ -9,6 +9,7 @@ import {
   pushInput,
   reserveKeyInput,
   type SyncBlobInput,
+  storeRecoveryInput,
 } from "../sync"
 
 const PULL_LIMIT = 500
@@ -134,6 +135,41 @@ export const syncRouter = router({
 
       return { keyId: row?.keyId ?? input.keyId }
     }),
+
+  // Stores the sync key wrapped with the user's recovery secret. The server
+  // only keeps the ciphertext, never the key nor the secret.
+  storeRecovery: protectedProcedure
+    .input(storeRecoveryInput)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const rows = await ctx.db
+        .update(syncAccount)
+        .set({
+          updatedAt: new Date(),
+          wrappedKey: Buffer.from(input.wrappedKey, "base64"),
+        })
+        .where(
+          and(
+            eq(syncAccount.userId, userId),
+            eq(syncAccount.keyId, input.keyId)
+          )
+        )
+        .returning({ userId: syncAccount.userId })
+
+      return { stored: rows.length > 0 }
+    }),
+
+  getRecovery: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.session.user.id
+    const rows = await ctx.db
+      .select({ wrappedKey: syncAccount.wrappedKey })
+      .from(syncAccount)
+      .where(eq(syncAccount.userId, userId))
+      .limit(1)
+    const wrapped = rows[0]?.wrappedKey ?? null
+
+    return { wrappedKey: wrapped ? wrapped.toString("base64") : null }
+  }),
 
   // Wipes the user's ciphertext so a device that lost its sync key can start
   // fresh instead of generating a key that cannot decrypt existing blobs.
