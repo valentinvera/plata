@@ -7,6 +7,7 @@ import { Container } from "@/components/container"
 import {
   type BudgetProgress,
   budgetProgress,
+  budgetSummary,
 } from "@/src/features/transactions/budget"
 import { DEFAULT_CATEGORIES } from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
@@ -34,7 +35,7 @@ function BudgetRow({ progress }: { progress: BudgetProgress }) {
   )
   const [isInvalid, setIsInvalid] = useState(false)
 
-  const { budget, category, ratio, spent } = progress
+  const { budget, category, ratio, remaining, spent, status } = progress
 
   const commit = useCallback(() => {
     const trimmed = value.trim()
@@ -68,6 +69,30 @@ function BudgetRow({ progress }: { progress: BudgetProgress }) {
           ? `Limit ${formatAmount(budget.amount, DEFAULT_CURRENCY)} · ${Math.round(ratio * 100)}%`
           : "No limit"}
       </Text>
+      {status === "exceeded" ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-1 text-destructive text-xs"
+        >
+          Over budget by {formatAmount(Math.abs(remaining), DEFAULT_CURRENCY)}
+        </Text>
+      ) : null}
+      {status === "warning" ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-1 text-destructive text-xs"
+        >
+          Near limit · {formatAmount(remaining, DEFAULT_CURRENCY)} left
+        </Text>
+      ) : null}
+      {status === "on_track" ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-1 text-muted text-xs"
+        >
+          {formatAmount(remaining, DEFAULT_CURRENCY)} left
+        </Text>
+      ) : null}
       <TextField className="mt-2" isInvalid={isInvalid}>
         <Label>Monthly limit</Label>
         <Input
@@ -131,12 +156,31 @@ export default function BudgetsScreen() {
     await Promise.all([refetchTransactions(), refetchBudgets()])
   }, [refetchBudgets, refetchTransactions])
 
+  const summary = useMemo(() => budgetSummary(progress), [progress])
+
   return (
     <Container className="px-5">
       <Text className="pt-3 font-bold text-2xl text-foreground">Budgets</Text>
       <Text className="mt-1 pb-2 text-muted text-sm">
         Monthly spending limit per category ({DEFAULT_CURRENCY}).
       </Text>
+
+      {!(isLoading || isError) && summary.status !== "unset" ? (
+        <Card className="mt-2 p-4">
+          <Text className="font-semibold text-foreground">
+            {formatAmount(summary.spent, DEFAULT_CURRENCY)} of{" "}
+            {formatAmount(summary.budgeted, DEFAULT_CURRENCY)}
+          </Text>
+          <Text
+            accessibilityLiveRegion="polite"
+            className="mt-1 text-muted text-xs"
+          >
+            {summary.remaining >= 0
+              ? `${formatAmount(summary.remaining, DEFAULT_CURRENCY)} left this month`
+              : `${formatAmount(Math.abs(summary.remaining), DEFAULT_CURRENCY)} over budget`}
+          </Text>
+        </Card>
+      ) : null}
 
       {isLoading ? (
         <View className="items-center py-8">

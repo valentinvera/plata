@@ -6,11 +6,37 @@ export interface Budget {
   updatedAt: number
 }
 
+export type BudgetStatus = "unset" | "on_track" | "warning" | "exceeded"
+
 export interface BudgetProgress {
   budget: Budget
   category: Category
   ratio: number
+  remaining: number
   spent: number
+  status: BudgetStatus
+}
+
+export interface BudgetSummary {
+  budgeted: number
+  remaining: number
+  spent: number
+  status: BudgetStatus
+}
+
+// A budget is "warning" once this share of it has been spent.
+export const WARNING_RATIO = 0.8
+
+export function budgetStatus(amount: number, spent: number): BudgetStatus {
+  if (amount <= 0) {
+    return "unset"
+  }
+
+  if (spent > amount) {
+    return "exceeded"
+  }
+
+  return spent >= amount * WARNING_RATIO ? "warning" : "on_track"
 }
 
 export function budgetProgress(
@@ -46,7 +72,33 @@ export function budgetProgress(
       budget,
       category,
       ratio: budget.amount > 0 ? spent / budget.amount : 0,
+      remaining: budget.amount - spent,
       spent,
+      status: budgetStatus(budget.amount, spent),
     }
   })
+}
+
+// Totals across the categories that actually have a limit set.
+export function budgetSummary(
+  progress: readonly BudgetProgress[]
+): BudgetSummary {
+  let budgeted = 0
+  let spent = 0
+
+  for (const item of progress) {
+    if (item.budget.amount <= 0) {
+      continue
+    }
+
+    budgeted += item.budget.amount
+    spent += item.spent
+  }
+
+  return {
+    budgeted,
+    remaining: budgeted - spent,
+    spent,
+    status: budgetStatus(budgeted, spent),
+  }
 }
