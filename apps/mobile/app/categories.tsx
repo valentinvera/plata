@@ -96,11 +96,15 @@ export default function CategoriesScreen() {
       setConfirmingDeleteId(null)
       try {
         await deleteCategory.mutateAsync(id)
+
+        if (editingId === id) {
+          resetForm()
+        }
       } catch {
         setError("Could not delete the category. Please try again.")
       }
     },
-    [deleteCategory]
+    [deleteCategory, editingId, resetForm]
   )
 
   const isBusy =
@@ -194,7 +198,8 @@ export default function CategoriesScreen() {
           {confirmingDeleteId === category.id ? (
             <View className="mt-3 gap-2">
               <Text className="text-destructive text-sm">
-                Delete this category? Transactions keep their category label.
+                Delete this category? Its transactions will move to
+                Uncategorized.
               </Text>
               <Button
                 isDisabled={isBusy}

@@ -1,4 +1,8 @@
-import { DEFAULT_CATEGORIES, normalizeCategoryKeywords } from "./categories"
+import {
+  DEFAULT_CATEGORIES,
+  normalizeCategoryKeywords,
+  UNCATEGORIZED_ID,
+} from "./categories"
 import { getDatabase } from "./db"
 import { createId } from "./id"
 import type { Category } from "./types"
@@ -105,7 +109,18 @@ export async function updateCategory(
   )
 }
 
+// Moves any transaction off the category before deleting it, so nothing is
+// left pointing at a missing id (which would silently render as uncategorized).
 export async function deleteCategory(id: string): Promise<void> {
   const database = await getDatabase()
-  await database.runAsync("DELETE FROM categories WHERE id = ?", id)
+
+  await database.withTransactionAsync(async () => {
+    await database.runAsync(
+      "UPDATE transactions SET category_id = ?, updated_at = ?, synced_at = NULL WHERE category_id = ?",
+      UNCATEGORIZED_ID,
+      Date.now(),
+      id
+    )
+    await database.runAsync("DELETE FROM categories WHERE id = ?", id)
+  })
 }

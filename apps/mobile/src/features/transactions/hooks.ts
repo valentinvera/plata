@@ -246,6 +246,7 @@ export function useDeleteCategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey })
       queryClient.invalidateQueries({ queryKey: budgetsQueryKey })
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey })
     },
   })
 }
