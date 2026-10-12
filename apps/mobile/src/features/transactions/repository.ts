@@ -2,7 +2,11 @@ import type { SQLiteDatabase } from "expo-sqlite"
 
 import { ALL_ACCOUNTS, accountFilterClause } from "./accounts"
 import { getDatabase } from "./db"
-import { buildTransactionFilter, type TransactionFilter } from "./filters"
+import {
+  buildTransactionFilter,
+  matchesSearch,
+  type TransactionFilter,
+} from "./filters"
 import { createId } from "./id"
 import { rowToTransaction, type TransactionRow } from "./row"
 import type { NewTransaction, Transaction, TransactionState } from "./types"
@@ -149,12 +153,14 @@ export async function listTransactionsFiltered(
   const database = await getDatabase()
   const { clause, params } = buildTransactionFilter(filter)
   const rows = await database.getAllAsync<TransactionRow>(
-    `SELECT ${TRANSACTION_COLUMNS} FROM transactions WHERE deleted_at IS NULL${clause} ORDER BY occurred_at DESC LIMIT ?`,
-    ...params,
-    limit
+    `SELECT ${TRANSACTION_COLUMNS} FROM transactions WHERE deleted_at IS NULL${clause} ORDER BY occurred_at DESC`,
+    ...params
   )
 
-  return rows.map(rowToTransaction)
+  return rows
+    .map(rowToTransaction)
+    .filter((transaction) => matchesSearch(transaction, filter))
+    .slice(0, limit)
 }
 
 export async function getTransaction(id: string): Promise<Transaction | null> {

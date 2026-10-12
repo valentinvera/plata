@@ -46,7 +46,9 @@ export function hasActiveFilters(filter: TransactionFilter): boolean {
 }
 
 // Builds the SQL fragment (starting with " AND ") and its bound parameters for
-// a filtered transaction query. The caller adds `deleted_at IS NULL`.
+// the structural filters. Text search is intentionally left to `matchesSearch`:
+// SQLite's LIKE is ASCII-only and treats `%`/`_` as wildcards, so matching in JS
+// keeps the SQL and in-memory paths consistent.
 export function buildTransactionFilter(
   filter: TransactionFilter
 ): FilterClause {
@@ -102,19 +104,12 @@ export function buildTransactionFilter(
     params.push(filter.maxAmount)
   }
 
-  const term = searchTerm(filter)
-  if (term) {
-    conditions.push("(merchant LIKE ? OR note LIKE ?)")
-    params.push(`%${term}%`, `%${term}%`)
-  }
-
   return {
     clause: conditions.length > 0 ? ` AND ${conditions.join(" AND ")}` : "",
     params,
   }
 }
 
-// In-memory counterpart of `buildTransactionFilter`, for lists already loaded.
 function matchesAccount(
   transaction: Transaction,
   filter: TransactionFilter
@@ -176,7 +171,8 @@ function matchesRange(
   )
 }
 
-function matchesSearch(
+// Case-insensitive, literal substring search over the merchant and note.
+export function matchesSearch(
   transaction: Transaction,
   filter: TransactionFilter
 ): boolean {
@@ -191,6 +187,7 @@ function matchesSearch(
   return haystack.toLowerCase().includes(term)
 }
 
+// In-memory counterpart of the SQL build, for lists already loaded.
 export function matchesFilter(
   transaction: Transaction,
   filter: TransactionFilter

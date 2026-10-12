@@ -5,6 +5,7 @@ import {
   buildTransactionFilter,
   hasActiveFilters,
   matchesFilter,
+  matchesSearch,
 } from "../filters"
 import type { Transaction } from "../types"
 
@@ -90,11 +91,38 @@ describe("buildTransactionFilter", () => {
     })
   })
 
-  it("builds a case-insensitive text search", () => {
+  it("leaves text search to the in-memory matcher", () => {
     expect(buildTransactionFilter({ query: "  Coto  " })).toEqual({
-      clause: " AND (merchant LIKE ? OR note LIKE ?)",
-      params: ["%coto%", "%coto%"],
+      clause: "",
+      params: [],
     })
+  })
+})
+
+describe("matchesSearch", () => {
+  it("matches merchant and note case-insensitively, including accents", () => {
+    const transaction = makeTransaction({
+      merchant: "Café Martínez",
+      note: null,
+    })
+
+    expect(matchesSearch(transaction, { query: "café" })).toBe(true)
+    expect(matchesSearch(transaction, { query: "CAFÉ" })).toBe(true)
+    expect(matchesSearch(transaction, { query: "mart" })).toBe(true)
+    expect(matchesSearch(transaction, { query: "coto" })).toBe(false)
+  })
+
+  it("treats LIKE wildcards as literal characters", () => {
+    const transaction = makeTransaction({ merchant: "50% off", note: null })
+
+    expect(matchesSearch(transaction, { query: "50%" })).toBe(true)
+    expect(matchesSearch(makeTransaction(), { query: "%" })).toBe(false)
+    expect(matchesSearch(makeTransaction(), { query: "_" })).toBe(false)
+  })
+
+  it("matches an empty search", () => {
+    expect(matchesSearch(makeTransaction(), {})).toBe(true)
+    expect(matchesSearch(makeTransaction(), { query: "  " })).toBe(true)
   })
 })
 
