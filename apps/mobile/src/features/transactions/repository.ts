@@ -6,10 +6,10 @@ import { createId } from "./id"
 import { rowToTransaction, type TransactionRow } from "./row"
 import type { NewTransaction, Transaction, TransactionState } from "./types"
 
-const COLUMNS =
+export const TRANSACTION_COLUMNS =
   "id, amount, category_id, confidence, created_at, currency, kind, merchant, note, occurred_at, raw_ref, source, state, updated_at, account_id"
 
-const INSERT_SQL = `INSERT INTO transactions (${COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+const INSERT_SQL = `INSERT INTO transactions (${TRANSACTION_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
 export const TRANSACTIONS_PAGE_SIZE = 100
 
@@ -103,7 +103,7 @@ export async function listTransactions(
 ): Promise<Transaction[]> {
   const database = await getDatabase()
   const rows = await database.getAllAsync<TransactionRow>(
-    `SELECT ${COLUMNS} FROM transactions ORDER BY occurred_at DESC LIMIT ?`,
+    `SELECT ${TRANSACTION_COLUMNS} FROM transactions WHERE deleted_at IS NULL ORDER BY occurred_at DESC LIMIT ?`,
     limit
   )
 
@@ -116,7 +116,7 @@ export async function listTransactionsInRange(
 ): Promise<Transaction[]> {
   const database = await getDatabase()
   const rows = await database.getAllAsync<TransactionRow>(
-    `SELECT ${COLUMNS} FROM transactions WHERE occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at DESC`,
+    `SELECT ${TRANSACTION_COLUMNS} FROM transactions WHERE deleted_at IS NULL AND occurred_at >= ? AND occurred_at < ? ORDER BY occurred_at DESC`,
     start,
     end
   )
@@ -132,7 +132,7 @@ export async function listTransactionsByState(
   const database = await getDatabase()
   const { clause, params } = accountFilterClause(accountFilter)
   const rows = await database.getAllAsync<TransactionRow>(
-    `SELECT ${COLUMNS} FROM transactions WHERE state = ?${clause} ORDER BY occurred_at DESC LIMIT ?`,
+    `SELECT ${TRANSACTION_COLUMNS} FROM transactions WHERE deleted_at IS NULL AND state = ?${clause} ORDER BY occurred_at DESC LIMIT ?`,
     state,
     ...params,
     limit
@@ -144,7 +144,7 @@ export async function listTransactionsByState(
 export async function getTransaction(id: string): Promise<Transaction | null> {
   const database = await getDatabase()
   const row = await database.getFirstAsync<TransactionRow>(
-    `SELECT ${COLUMNS} FROM transactions WHERE id = ?`,
+    `SELECT ${TRANSACTION_COLUMNS} FROM transactions WHERE deleted_at IS NULL AND id = ?`,
     id
   )
 
@@ -157,7 +157,7 @@ export async function updateTransactionState(
 ): Promise<void> {
   const database = await getDatabase()
   await database.runAsync(
-    "UPDATE transactions SET state = ?, updated_at = ? WHERE id = ?",
+    "UPDATE transactions SET state = ?, updated_at = ?, synced_at = NULL WHERE id = ?",
     state,
     Date.now(),
     id
@@ -184,7 +184,7 @@ export async function updateTransaction(
     return
   }
 
-  assignments.push("updated_at = ?")
+  assignments.push("updated_at = ?", "synced_at = NULL")
   values.push(Date.now(), id)
 
   const database = await getDatabase()
@@ -194,7 +194,16 @@ export async function updateTransaction(
   )
 }
 
+// Soft delete: the row is kept as a tombstone so the delete can sync and the
+// remote copy is not resurrected on the next pull.
 export async function deleteTransaction(id: string): Promise<void> {
   const database = await getDatabase()
-  await database.runAsync("DELETE FROM transactions WHERE id = ?", id)
+  const now = Date.now()
+
+  await database.runAsync(
+    "UPDATE transactions SET deleted_at = ?, updated_at = ?, synced_at = NULL WHERE id = ?",
+    now,
+    now,
+    id
+  )
 }
