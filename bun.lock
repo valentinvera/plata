@@ -49,6 +49,7 @@
         "@expo/metro-runtime": "~57.0.15",
         "@expo/vector-icons": "^15.0.2",
         "@gorhom/bottom-sheet": "^5.2.14",
+        "@noble/ciphers": "^2.4.0",
         "@plata/trpc": "workspace:*",
         "@react-native-ml-kit/text-recognition": "2.0.0",
         "@tanstack/react-form": "catalog:",
