@@ -9,6 +9,13 @@ import {
 } from "./account-repository"
 import { getAppMeta, setAppMeta } from "./app-meta-repository"
 import { listBudgets, setBudget } from "./budget-repository"
+import {
+  type CategoryInput,
+  createCategory,
+  deleteCategory,
+  listCategories,
+  updateCategory,
+} from "./category-repository"
 import type { DateRange } from "./periods"
 import type { Preferences } from "./preferences"
 import { getPreferences, setPreferences } from "./preferences-repository"
@@ -167,6 +174,45 @@ export function useDeleteAccount() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: accountsQueryKey })
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey })
+    },
+  })
+}
+
+export const categoriesQueryKey = ["categories"] as const
+
+export function useCategories() {
+  return useQuery({ queryFn: listCategories, queryKey: categoriesQueryKey })
+}
+
+export function useCreateCategory() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: CategoryInput) => createCategory(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: categoriesQueryKey }),
+  })
+}
+
+export function useUpdateCategory() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { id: string; update: Partial<CategoryInput> }) =>
+      updateCategory(input.id, input.update),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: categoriesQueryKey }),
+  })
+}
+
+export function useDeleteCategory() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => deleteCategory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: categoriesQueryKey })
+      queryClient.invalidateQueries({ queryKey: budgetsQueryKey })
     },
   })
 }
