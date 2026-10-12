@@ -10,6 +10,8 @@ import {
 import { getAppMeta, setAppMeta } from "./app-meta-repository"
 import { listBudgets, setBudget } from "./budget-repository"
 import type { DateRange } from "./periods"
+import type { Preferences } from "./preferences"
+import { getPreferences, setPreferences } from "./preferences-repository"
 import type { TransactionUpdate } from "./repository"
 import {
   createTransaction,
@@ -186,5 +188,21 @@ export function useSetAppMeta() {
       setAppMeta(input.key, input.value),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: appMetaQueryKey }),
+  })
+}
+
+export const preferencesQueryKey = ["preferences"] as const
+
+export function usePreferences() {
+  return useQuery({ queryFn: getPreferences, queryKey: preferencesQueryKey })
+}
+
+export function useSetPreferences() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (update: Partial<Preferences>) => setPreferences(update),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: preferencesQueryKey }),
   })
 }

@@ -3,7 +3,10 @@ import { useEffect, useState } from "react"
 import { AppState, Platform } from "react-native"
 
 import { authClient } from "@/lib/auth-client"
-import { transactionsQueryKey } from "@/src/features/transactions/hooks"
+import {
+  transactionsQueryKey,
+  usePreferences,
+} from "@/src/features/transactions/hooks"
 import { syncApiClient } from "@/utils/trpc"
 
 import { runSync } from "./sync-client"
@@ -34,11 +37,14 @@ function statusFor(error: unknown): SyncStatus {
 export function useSyncOnForeground(): SyncStatus {
   const queryClient = useQueryClient()
   const { data: session } = authClient.useSession()
+  const { data: preferences } = usePreferences()
   const userId = session?.user.id ?? null
+  // Sync is opt-in: the local-only default must keep financial data on device.
+  const syncEnabled = preferences?.privacyMode === "sync"
   const [status, setStatus] = useState<SyncStatus>("idle")
 
   useEffect(() => {
-    if (!userId || Platform.OS === "web") {
+    if (!(userId && syncEnabled) || Platform.OS === "web") {
       return
     }
 
@@ -64,7 +70,7 @@ export function useSyncOnForeground(): SyncStatus {
     })
 
     return () => subscription.remove()
-  }, [queryClient, userId])
+  }, [queryClient, syncEnabled, userId])
 
   return status
 }
