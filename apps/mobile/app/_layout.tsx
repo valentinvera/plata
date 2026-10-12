@@ -35,6 +35,7 @@ function StackLayout() {
       <Stack.Screen name="accounts" options={{ title: "Accounts" }} />
       <Stack.Screen name="account" options={{ title: "Account" }} />
       <Stack.Screen name="search" options={{ title: "Search" }} />
+      <Stack.Screen name="categories" options={{ title: "Categories" }} />
       <Stack.Screen
         name="notifications"
         options={{ title: "Automatic import" }}

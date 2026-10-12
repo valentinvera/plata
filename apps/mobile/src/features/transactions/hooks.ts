@@ -19,6 +19,7 @@ import {
   createCategory,
   deleteCategory,
   listCategories,
+  listCustomCategories,
   updateCategory,
 } from "./category-repository"
 import type { TransactionFilter } from "./filters"
@@ -209,6 +210,13 @@ export function useCategories() {
   return useQuery({ queryFn: listCategories, queryKey: categoriesQueryKey })
 }
 
+export function useCustomCategories() {
+  return useQuery({
+    queryFn: listCustomCategories,
+    queryKey: [...categoriesQueryKey, "custom"],
+  })
+}
+
 export function useCreateCategory() {
   const queryClient = useQueryClient()
 
@@ -238,6 +246,7 @@ export function useDeleteCategory() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey })
       queryClient.invalidateQueries({ queryKey: budgetsQueryKey })
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey })
     },
   })
 }

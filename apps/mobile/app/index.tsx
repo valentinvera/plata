@@ -114,6 +114,10 @@ export default function TransactionsScreen() {
     router.push("/search")
   }, [])
 
+  const handleCategories = useCallback(() => {
+    router.push("/categories")
+  }, [])
+
   const handleNotifications = useCallback(() => {
     router.push("/notifications")
   }, [])
@@ -193,6 +197,9 @@ export default function TransactionsScreen() {
       </Button>
       <Button className="mt-2" onPress={handleBudgets} variant="outline">
         <Button.Label>Budgets</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handleCategories} variant="outline">
+        <Button.Label>Categories</Button.Label>
       </Button>
       <Button className="mt-2" onPress={handleAccounts} variant="outline">
         <Button.Label>Accounts</Button.Label>
