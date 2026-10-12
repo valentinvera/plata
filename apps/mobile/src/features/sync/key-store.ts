@@ -1,4 +1,8 @@
-import { getRandomBytes } from "expo-crypto"
+import {
+  CryptoDigestAlgorithm,
+  digestStringAsync,
+  getRandomBytes,
+} from "expo-crypto"
 import { deleteItemAsync, getItemAsync, setItemAsync } from "expo-secure-store"
 
 import { createCipher, type RandomBytes } from "./crypto"
@@ -44,6 +48,16 @@ export function initializeSyncKey(): Promise<Uint8Array> {
 
 export async function clearSyncKey(): Promise<void> {
   await deleteItemAsync(KEY_NAME)
+}
+
+export function storeSyncKey(key: Uint8Array): Promise<void> {
+  return setItemAsync(KEY_NAME, encodeSyncKey(key))
+}
+
+// Stable, non-secret fingerprint used to compare this device's key with the
+// account's reserved key identity.
+export function keyFingerprint(key: Uint8Array): Promise<string> {
+  return digestStringAsync(CryptoDigestAlgorithm.SHA256, encodeSyncKey(key))
 }
 
 // Fails closed when no key exists: a fresh install must recover or explicitly
