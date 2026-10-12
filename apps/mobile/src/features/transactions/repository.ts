@@ -1,6 +1,5 @@
 import type { SQLiteDatabase } from "expo-sqlite"
 
-import { listAccounts } from "./account-repository"
 import { ALL_ACCOUNTS, accountFilterClause } from "./accounts"
 import { getDatabase } from "./db"
 import {
@@ -9,8 +8,6 @@ import {
   type TransactionFilter,
 } from "./filters"
 import { createId } from "./id"
-import { resolveDefaultAccountId } from "./preferences"
-import { getPreferences } from "./preferences-repository"
 import { rowToTransaction, type TransactionRow } from "./row"
 import type { NewTransaction, Transaction, TransactionState } from "./types"
 
@@ -79,29 +76,11 @@ function insertTransaction(
   )
 }
 
-// New transactions without a chosen account fall back to the user's default
-// (explicit default account, otherwise the most-used payment kind).
-async function resolveCreateAccountId(
-  requested: string | null
-): Promise<string | null> {
-  if (requested !== null) {
-    return requested
-  }
-
-  const [preferences, accounts] = await Promise.all([
-    getPreferences(),
-    listAccounts(),
-  ])
-
-  return resolveDefaultAccountId(preferences, accounts)
-}
-
 export async function createTransaction(
   input: NewTransaction
 ): Promise<Transaction> {
   const database = await getDatabase()
-  const accountId = await resolveCreateAccountId(input.accountId)
-  const transaction = buildTransaction({ ...input, accountId }, Date.now())
+  const transaction = buildTransaction(input, Date.now())
   await insertTransaction(database, transaction)
   return transaction
 }
@@ -111,17 +90,7 @@ export async function createTransactions(
 ): Promise<Transaction[]> {
   const database = await getDatabase()
   const now = Date.now()
-  const defaultAccountId = inputs.some((input) => input.accountId === null)
-    ? await resolveCreateAccountId(null)
-    : null
-  const transactions = inputs.map((input) =>
-    buildTransaction(
-      input.accountId === null && defaultAccountId !== null
-        ? { ...input, accountId: defaultAccountId }
-        : input,
-      now
-    )
-  )
+  const transactions = inputs.map((input) => buildTransaction(input, now))
 
   await database.withTransactionAsync(async () => {
     await Promise.all(
