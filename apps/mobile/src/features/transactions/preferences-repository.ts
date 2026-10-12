@@ -7,16 +7,27 @@ import {
 
 const PREFERENCES_KEY = "preferences"
 
+// Preference writes are read-merge-write, so serialize them to avoid two
+// concurrent updates (e.g. a chip tap while Save is in flight) clobbering each
+// other.
+let pendingWrite: Promise<unknown> = Promise.resolve()
+
 export async function getPreferences(): Promise<Preferences> {
   return parsePreferences(await getAppMeta(PREFERENCES_KEY))
 }
 
-export async function setPreferences(
+export function setPreferences(
   update: Partial<Preferences>
 ): Promise<Preferences> {
-  const next = { ...(await getPreferences()), ...update }
+  const result = pendingWrite.then(async () => {
+    const next = { ...(await getPreferences()), ...update }
 
-  await setAppMeta(PREFERENCES_KEY, serializePreferences(next))
+    await setAppMeta(PREFERENCES_KEY, serializePreferences(next))
 
-  return next
+    return next
+  })
+
+  pendingWrite = result.catch(() => undefined)
+
+  return result
 }

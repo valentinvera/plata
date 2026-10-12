@@ -8,7 +8,7 @@ import {
   Spinner,
   TextField,
 } from "heroui-native"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { ScrollView, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
@@ -37,10 +37,12 @@ function parseWeight(value: string): number | null {
 }
 
 function OptionChip({
+  disabled,
   label,
   onPress,
   selected,
 }: {
+  disabled?: boolean
   label: string
   onPress: () => void
   selected: boolean
@@ -49,6 +51,7 @@ function OptionChip({
     <Chip
       accessibilityRole="radio"
       accessibilityState={{ selected }}
+      disabled={disabled}
       onPress={onPress}
       variant={selected ? "primary" : "soft"}
     >
@@ -67,15 +70,19 @@ export default function PreferencesScreen() {
   const [card, setCard] = useState("0")
   const [transfer, setTransfer] = useState("0")
   const [mixError, setMixError] = useState<string | null>(null)
+  const initialized = useRef(false)
 
+  // Seed the draft only on the first load: unrelated preference updates (e.g.
+  // choosing a default account) must not discard unsaved weights.
   useEffect(() => {
-    if (!preferences) {
+    if (!preferences || initialized.current) {
       return
     }
 
     setCash(String(preferences.paymentMix.cash))
     setCard(String(preferences.paymentMix.card))
     setTransfer(String(preferences.paymentMix.transfer))
+    initialized.current = true
   }, [preferences])
 
   const defaultAccountId = preferences?.defaultAccountId ?? null
@@ -92,13 +99,17 @@ export default function PreferencesScreen() {
     }
 
     setMixError(null)
-    await setPreferences.mutateAsync({
-      paymentMix: {
-        card: cardWeight,
-        cash: cashWeight,
-        transfer: transferWeight,
-      },
-    })
+    try {
+      await setPreferences.mutateAsync({
+        paymentMix: {
+          card: cardWeight,
+          cash: cashWeight,
+          transfer: transferWeight,
+        },
+      })
+    } catch {
+      setMixError("Could not save the mix. Please try again.")
+    }
   }, [card, cash, setPreferences, transfer])
 
   if (isLoading) {
@@ -125,12 +136,14 @@ export default function PreferencesScreen() {
         showsHorizontalScrollIndicator={false}
       >
         <OptionChip
+          disabled={setPreferences.isPending}
           label="No default"
           onPress={() => setPreferences.mutate({ defaultAccountId: null })}
           selected={defaultAccountId === null}
         />
         {accounts.map((account) => (
           <OptionChip
+            disabled={setPreferences.isPending}
             key={account.id}
             label={account.name}
             onPress={() =>
