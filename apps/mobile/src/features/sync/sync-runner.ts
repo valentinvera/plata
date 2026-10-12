@@ -10,19 +10,28 @@ export class SyncKeyMissingError extends Error {
   }
 }
 
+export class SyncKeyMismatchError extends Error {
+  constructor() {
+    super("This device's sync key does not match the account's key")
+    this.name = "SyncKeyMismatchError"
+  }
+}
+
 export interface SyncRunnerDeps {
   createStore: () => SyncStore
   createTransport: (client: SyncApiClient) => SyncTransport
   deviceId: string
   initializeKey: () => Promise<Uint8Array>
+  keyId: (key: Uint8Array) => Promise<string>
   platform?: string
   randomBytes: RandomBytes
   readKey: () => Promise<Uint8Array | null>
 }
 
-// Runs a sync pass, deciding what to do about the key first. When this device
-// has no key yet, starting fresh is only safe if the account has no remote
-// data: otherwise we fail closed so the existing ciphertext is not orphaned.
+// Runs a sync pass, resolving the account-wide key identity first. A device
+// without a key may only bootstrap one when the account has no data; otherwise
+// it fails closed. The reserved key id then guards against two devices
+// bootstrapping different keys for the same account.
 export async function runSyncWithDeps(
   client: SyncApiClient,
   deps: SyncRunnerDeps
@@ -37,6 +46,13 @@ export async function runSyncWithDeps(
     }
 
     key = await deps.initializeKey()
+  }
+
+  const keyId = await deps.keyId(key)
+  const reserved = await client.sync.reserveKey.mutate({ keyId })
+
+  if (reserved.keyId !== keyId) {
+    throw new SyncKeyMismatchError()
   }
 
   return syncNow({

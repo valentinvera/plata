@@ -1,7 +1,9 @@
+import { CryptoDigestAlgorithm, digestStringAsync } from "expo-crypto"
 import { Platform } from "react-native"
 
 import { getAppMeta, setAppMeta } from "../transactions/app-meta-repository"
 import { createId } from "../transactions/id"
+import { encodeSyncKey } from "./key"
 import {
   clearSyncKey,
   initializeSyncKey,
@@ -15,6 +17,10 @@ import type { SyncSummary } from "./types"
 
 const DEVICE_ID_KEY = "sync_device_id"
 const SYNC_USER_KEY = "sync_user_id"
+
+function keyFingerprint(key: Uint8Array): Promise<string> {
+  return digestStringAsync(CryptoDigestAlgorithm.SHA256, encodeSyncKey(key))
+}
 
 export async function getOrCreateDeviceId(): Promise<string> {
   const existing = await getAppMeta(DEVICE_ID_KEY)
@@ -60,6 +66,7 @@ export async function runSync(
     createTransport: createSyncTransport,
     deviceId,
     initializeKey: initializeSyncKey,
+    keyId: keyFingerprint,
     platform: Platform.OS,
     randomBytes,
     readKey: readSyncKey,

@@ -2,6 +2,7 @@ import { describe, expect, it } from "bun:test"
 
 import {
   runSyncWithDeps,
+  SyncKeyMismatchError,
   SyncKeyMissingError,
   type SyncRunnerDeps,
 } from "../sync-runner"
@@ -15,7 +16,10 @@ const BLOB: SyncBlob = {
   updatedAt: "2026-01-01T00:00:00.000Z",
 }
 
-function createClient(remote: SyncBlob[]): SyncApiClient {
+function createClient(
+  remote: SyncBlob[],
+  reservedKeyId?: string
+): SyncApiClient {
   return {
     sync: {
       pull: { query: () => Promise.resolve({ blobs: remote, cursor: null }) },
@@ -24,6 +28,10 @@ function createClient(remote: SyncBlob[]): SyncApiClient {
           Promise.resolve({ accepted: input.blobs.map((blob) => blob.id) }),
       },
       reset: { mutate: () => Promise.resolve({ deleted: 0 }) },
+      reserveKey: {
+        mutate: (input) =>
+          Promise.resolve({ keyId: reservedKeyId ?? input.keyId }),
+      },
     },
   }
 }
@@ -53,6 +61,7 @@ function createDeps(overrides: Partial<SyncRunnerDeps> = {}) {
 
       return Promise.resolve(new Uint8Array(32).fill(1))
     },
+    keyId: () => Promise.resolve("key-id"),
     randomBytes: (length) => new Uint8Array(length).fill(2),
     readKey: () => Promise.resolve(null),
     ...overrides,
@@ -89,5 +98,15 @@ describe("runSyncWithDeps", () => {
 
     expect(initialized()).toBe(0)
     expect(summary).toEqual({ applied: 0, pulled: 0, pushed: 0 })
+  })
+
+  it("fails closed when the account already reserved a different key", async () => {
+    const { deps } = createDeps({
+      readKey: () => Promise.resolve(new Uint8Array(32).fill(9)),
+    })
+
+    await expect(
+      runSyncWithDeps(createClient([], "another-key"), deps)
+    ).rejects.toThrow(SyncKeyMismatchError)
   })
 })
