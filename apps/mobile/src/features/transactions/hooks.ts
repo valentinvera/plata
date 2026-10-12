@@ -19,6 +19,7 @@ import {
   createCategory,
   deleteCategory,
   listCategories,
+  listCustomCategories,
   updateCategory,
 } from "./category-repository"
 import type { TransactionFilter } from "./filters"
@@ -207,6 +208,13 @@ export const categoriesQueryKey = ["categories"] as const
 
 export function useCategories() {
   return useQuery({ queryFn: listCategories, queryKey: categoriesQueryKey })
+}
+
+export function useCustomCategories() {
+  return useQuery({
+    queryFn: listCustomCategories,
+    queryKey: [...categoriesQueryKey, "custom"],
+  })
 }
 
 export function useCreateCategory() {
