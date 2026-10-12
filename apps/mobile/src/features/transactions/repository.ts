@@ -155,10 +155,16 @@ export async function listTransactionsByState(
   return rows.map(rowToTransaction)
 }
 
+export interface TransactionPageOptions {
+  limit?: number
+  offset?: number
+}
+
 export async function listTransactionsFiltered(
   filter: TransactionFilter,
-  limit = TRANSACTIONS_PAGE_SIZE
+  options: TransactionPageOptions = {}
 ): Promise<Transaction[]> {
+  const { limit = TRANSACTIONS_PAGE_SIZE, offset = 0 } = options
   const database = await getDatabase()
   const { clause, params } = buildTransactionFilter(filter)
   const rows = await database.getAllAsync<TransactionRow>(
@@ -169,7 +175,7 @@ export async function listTransactionsFiltered(
   return rows
     .map(rowToTransaction)
     .filter((transaction) => matchesSearch(transaction, filter))
-    .slice(0, limit)
+    .slice(offset, offset + limit)
 }
 
 export async function getTransaction(id: string): Promise<Transaction | null> {

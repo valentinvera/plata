@@ -11,7 +11,7 @@ import {
 import {
   type ReactNode,
   useCallback,
-  useDeferredValue,
+  useEffect,
   useMemo,
   useState,
 } from "react"
@@ -37,6 +37,19 @@ import type {
 } from "@/src/features/transactions/types"
 
 const ALL_CATEGORIES = "all"
+const SEARCH_DEBOUNCE_MS = 250
+
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), delayMs)
+
+    return () => clearTimeout(timer)
+  }, [delayMs, value])
+
+  return debounced
+}
 
 const KIND_OPTIONS: readonly {
   label: string
@@ -106,7 +119,7 @@ export default function SearchScreen() {
   const [kind, setKind] = useState<TransactionKind | "all">("all")
   const [state, setState] = useState<TransactionState | "all">("all")
 
-  const deferredQuery = useDeferredValue(query)
+  const debouncedQuery = useDebouncedValue(query, SEARCH_DEBOUNCE_MS)
   const { data: accountsData } = useAccounts()
   const { data: categoriesData } = useCategories()
   const accounts = accountsData ?? []
@@ -117,14 +130,22 @@ export default function SearchScreen() {
       accountId,
       categoryId: categoryId === ALL_CATEGORIES ? undefined : categoryId,
       kind: kind === "all" ? undefined : kind,
-      query: deferredQuery,
+      query: debouncedQuery,
       state: state === "all" ? undefined : state,
     }),
-    [accountId, categoryId, deferredQuery, kind, state]
+    [accountId, categoryId, debouncedQuery, kind, state]
   )
 
-  const { data, isError, isLoading, refetch } = useFilteredTransactions(filter)
-  const transactions = data ?? []
+  const {
+    data,
+    fetchNextPage,
+    hasNextPage,
+    isError,
+    isFetchingNextPage,
+    isLoading,
+    refetch,
+  } = useFilteredTransactions(filter)
+  const transactions = useMemo(() => data?.pages.flat() ?? [], [data])
   const showResults = !(isLoading || isError)
 
   const handleOpen = useCallback((id: string) => {
@@ -257,6 +278,19 @@ export default function SearchScreen() {
             )
           })
         : null}
+
+      {showResults && hasNextPage ? (
+        <Button
+          className="mt-4"
+          isDisabled={isFetchingNextPage}
+          onPress={() => fetchNextPage()}
+          variant="outline"
+        >
+          <Button.Label>
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </Button.Label>
+        </Button>
+      ) : null}
     </Container>
   )
 }

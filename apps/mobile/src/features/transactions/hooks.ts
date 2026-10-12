@@ -1,4 +1,9 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query"
 
 import {
   type AccountInput,
@@ -33,7 +38,7 @@ import {
   updateTransaction,
   updateTransactionState,
 } from "./repository"
-import type { NewTransaction, TransactionState } from "./types"
+import type { NewTransaction, Transaction, TransactionState } from "./types"
 
 export const transactionsQueryKey = ["transactions"] as const
 
@@ -65,9 +70,20 @@ export function useTransactionsInRange(range: DateRange) {
   })
 }
 
+export const SEARCH_PAGE_SIZE = 100
+
 export function useFilteredTransactions(filter: TransactionFilter) {
-  return useQuery({
-    queryFn: () => listTransactionsFiltered(filter),
+  return useInfiniteQuery({
+    getNextPageParam: (lastPage: Transaction[], pages: Transaction[][]) =>
+      lastPage.length < SEARCH_PAGE_SIZE
+        ? undefined
+        : pages.reduce((total, page) => total + page.length, 0),
+    initialPageParam: 0,
+    queryFn: ({ pageParam }): Promise<Transaction[]> =>
+      listTransactionsFiltered(filter, {
+        limit: SEARCH_PAGE_SIZE,
+        offset: pageParam,
+      }),
     queryKey: [...transactionsQueryKey, "filter", filter],
   })
 }
