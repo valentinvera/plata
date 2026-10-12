@@ -16,6 +16,7 @@ import {
   listCategories,
   updateCategory,
 } from "./category-repository"
+import type { TransactionFilter } from "./filters"
 import type { DateRange } from "./periods"
 import type { Preferences } from "./preferences"
 import { getPreferences, setPreferences } from "./preferences-repository"
@@ -27,6 +28,7 @@ import {
   getTransaction,
   listTransactions,
   listTransactionsByState,
+  listTransactionsFiltered,
   listTransactionsInRange,
   updateTransaction,
   updateTransactionState,
@@ -60,6 +62,13 @@ export function useTransactionsInRange(range: DateRange) {
   return useQuery({
     queryFn: () => listTransactionsInRange(range.start, range.end),
     queryKey: [...transactionsQueryKey, "range", range.start, range.end],
+  })
+}
+
+export function useFilteredTransactions(filter: TransactionFilter) {
+  return useQuery({
+    queryFn: () => listTransactionsFiltered(filter),
+    queryKey: [...transactionsQueryKey, "filter", filter],
   })
 }
 
