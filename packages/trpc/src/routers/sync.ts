@@ -77,9 +77,10 @@ export const syncRouter = router({
       })
 
     const blobs = dedupeById(input.blobs)
+    let accepted: string[] = []
 
     if (blobs.length > 0) {
-      await ctx.db
+      const rows = await ctx.db
         .insert(encryptedBlob)
         .values(
           blobs.map((blob) => ({
@@ -103,8 +104,13 @@ export const syncRouter = router({
           setWhere: sql`excluded.client_updated_at >= ${encryptedBlob.clientUpdatedAt}`,
           target: [encryptedBlob.userId, encryptedBlob.id],
         })
+        // Only rows actually written are returned, so a client can tell which
+        // of its versions the server accepted.
+        .returning({ id: encryptedBlob.id })
+
+      accepted = rows.map((row) => row.id)
     }
 
-    return { applied: blobs.length }
+    return { accepted }
   }),
 })

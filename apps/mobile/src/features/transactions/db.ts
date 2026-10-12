@@ -22,7 +22,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   source TEXT NOT NULL,
   state TEXT NOT NULL,
   updated_at INTEGER NOT NULL,
-  account_id TEXT
+  account_id TEXT,
+  deleted_at INTEGER,
+  synced_at INTEGER
 );
 
 CREATE INDEX IF NOT EXISTS idx_transactions_occurred_at ON transactions (occurred_at);
@@ -55,10 +57,23 @@ async function ensureTransactionColumns(
   const columns = await database.getAllAsync<{ name: string }>(
     "PRAGMA table_info(transactions)"
   )
+  const names = new Set(columns.map((column) => column.name))
 
-  if (!columns.some((column) => column.name === "account_id")) {
+  if (!names.has("account_id")) {
     await database.execAsync(
       "ALTER TABLE transactions ADD COLUMN account_id TEXT"
+    )
+  }
+
+  if (!names.has("deleted_at")) {
+    await database.execAsync(
+      "ALTER TABLE transactions ADD COLUMN deleted_at INTEGER"
+    )
+  }
+
+  if (!names.has("synced_at")) {
+    await database.execAsync(
+      "ALTER TABLE transactions ADD COLUMN synced_at INTEGER"
     )
   }
 }

@@ -89,7 +89,8 @@ export async function deleteAccount(id: string): Promise<void> {
 
   await database.withTransactionAsync(async () => {
     await database.runAsync(
-      "UPDATE transactions SET account_id = NULL WHERE account_id = ?",
+      "UPDATE transactions SET account_id = NULL, updated_at = ?, synced_at = NULL WHERE account_id = ?",
+      Date.now(),
       id
     )
     await database.runAsync("DELETE FROM accounts WHERE id = ?", id)

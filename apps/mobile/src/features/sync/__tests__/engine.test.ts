@@ -68,7 +68,7 @@ function createStore(initial: SyncRecord[] = []) {
 
 function createTransport(
   responses: { blobs?: SyncBlob[]; cursor?: string | null }[] = [],
-  onPush?: () => void
+  options: { accept?: (blob: SyncBlob) => boolean; onPush?: () => void } = {}
 ) {
   const pushes: { blobs: SyncBlob[]; deviceId: string }[] = []
   let index = 0
@@ -85,9 +85,12 @@ function createTransport(
     },
     push: (input) => {
       pushes.push(input)
-      onPush?.()
+      options.onPush?.()
+      const accepted = options.accept
+        ? input.blobs.filter(options.accept).map((blob) => blob.id)
+        : input.blobs.map((blob) => blob.id)
 
-      return Promise.resolve({ applied: input.blobs.length })
+      return Promise.resolve({ accepted })
     },
   }
 
@@ -141,8 +144,27 @@ describe("syncNow", () => {
 
   it("does not acknowledge a record edited while the push was in flight", async () => {
     const { dirty, records, store } = createStore([record()])
-    const { transport } = createTransport([{ blobs: [], cursor: null }], () => {
-      records.set("tx-1", record({ updatedAt: 200 }))
+    const { transport } = createTransport([{ blobs: [], cursor: null }], {
+      onPush: () => {
+        records.set("tx-1", record({ updatedAt: 200 }))
+      },
+    })
+
+    const summary = await syncNow({
+      cipher,
+      deviceId: "device-1",
+      store,
+      transport,
+    })
+
+    expect(summary.pushed).toBe(1)
+    expect(dirty.has("tx-1")).toBe(true)
+  })
+
+  it("keeps server-rejected versions dirty", async () => {
+    const { dirty, store } = createStore([record()])
+    const { transport } = createTransport([{ blobs: [], cursor: null }], {
+      accept: () => false,
     })
 
     const summary = await syncNow({
