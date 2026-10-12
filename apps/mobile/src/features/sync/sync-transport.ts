@@ -14,7 +14,7 @@ export interface SyncApiClient {
         blobs: SyncBlob[]
         deviceId: string
         platform?: string
-      }) => Promise<{ applied: number }>
+      }) => Promise<{ accepted: string[] }>
     }
   }
 }

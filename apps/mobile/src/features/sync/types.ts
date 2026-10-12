@@ -39,7 +39,7 @@ export interface SyncTransport {
     blobs: SyncBlob[]
     deviceId: string
     platform?: string
-  }) => Promise<{ applied: number }>
+  }) => Promise<{ accepted: string[] }>
 }
 
 export interface SyncSummary {

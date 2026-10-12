@@ -11,7 +11,7 @@ const BLOB: SyncBlob = {
 }
 
 describe("createSyncTransport", () => {
-  it("forwards push input to the client", async () => {
+  it("forwards push input and returns the accepted ids", async () => {
     const calls: unknown[] = []
     const client: SyncApiClient = {
       sync: {
@@ -20,7 +20,9 @@ describe("createSyncTransport", () => {
           mutate: (input) => {
             calls.push(input)
 
-            return Promise.resolve({ applied: input.blobs.length })
+            return Promise.resolve({
+              accepted: input.blobs.map((blob) => blob.id),
+            })
           },
         },
       },
@@ -32,7 +34,7 @@ describe("createSyncTransport", () => {
       deviceId: "device-1",
     })
 
-    expect(result).toEqual({ applied: 1 })
+    expect(result).toEqual({ accepted: ["tx-1"] })
     expect(calls).toEqual([{ blobs: [BLOB], deviceId: "device-1" }])
   })
 
@@ -43,7 +45,7 @@ describe("createSyncTransport", () => {
           query: (input) =>
             Promise.resolve({ blobs: [BLOB], cursor: `cursor-${input.since}` }),
         },
-        push: { mutate: () => Promise.resolve({ applied: 0 }) },
+        push: { mutate: () => Promise.resolve({ accepted: [] }) },
       },
     }
 

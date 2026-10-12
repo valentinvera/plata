@@ -85,8 +85,17 @@ export async function syncNow(
   // not overtake an earlier one.
   for (const batch of batches) {
     // biome-ignore lint/performance/noAwaitInLoops: pushes must run in order
-    await transport.push({ blobs: batch.blobs, deviceId, platform })
-    await store.markSynced(batch.versions)
+    const { accepted } = await transport.push({
+      blobs: batch.blobs,
+      deviceId,
+      platform,
+    })
+    // Only acknowledge versions the server actually wrote: a stale version the
+    // server rejected must stay dirty so it is not silently dropped.
+    const acceptedIds = new Set(accepted)
+    await store.markSynced(
+      batch.versions.filter((version) => acceptedIds.has(version.id))
+    )
     pushed += batch.blobs.length
   }
 
