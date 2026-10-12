@@ -1,3 +1,4 @@
+import { normalizeText } from "./text"
 import type { Category } from "./types"
 
 export const UNCATEGORIZED_ID = "uncategorized"
@@ -139,4 +140,50 @@ export function getCategoryById(
   return (
     categories.find((category) => category.id === id) ?? UNCATEGORIZED_CATEGORY
   )
+}
+
+const KEYWORD_SEPARATOR = ","
+
+// Keywords are matched against normalized text, so they must be normalized too.
+export function normalizeCategoryKeywords(
+  keywords: readonly string[]
+): string[] {
+  const seen = new Set<string>()
+  const normalized: string[] = []
+
+  for (const keyword of keywords) {
+    const value = normalizeText(keyword)
+
+    if (value && !seen.has(value)) {
+      seen.add(value)
+      normalized.push(value)
+    }
+  }
+
+  return normalized
+}
+
+export function parseCategoryKeywords(value: string): string[] {
+  return normalizeCategoryKeywords(value.split(KEYWORD_SEPARATOR))
+}
+
+export function validateCategoryName(
+  name: string,
+  categories: readonly Category[],
+  currentId?: string
+): string | null {
+  const trimmed = name.trim()
+
+  if (trimmed.length === 0) {
+    return "Enter a name"
+  }
+
+  const normalized = trimmed.toLowerCase()
+  const duplicate = categories.some(
+    (category) =>
+      category.id !== currentId &&
+      category.name.trim().toLowerCase() === normalized
+  )
+
+  return duplicate ? "A category with that name already exists" : null
 }
