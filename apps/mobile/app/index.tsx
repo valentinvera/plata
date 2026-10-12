@@ -110,6 +110,10 @@ export default function TransactionsScreen() {
     router.push("/account")
   }, [])
 
+  const handleSearch = useCallback(() => {
+    router.push("/search")
+  }, [])
+
   const handleNotifications = useCallback(() => {
     router.push("/notifications")
   }, [])
@@ -180,6 +184,9 @@ export default function TransactionsScreen() {
       </Button>
       <Button className="mt-2" onPress={handleWeek} variant="outline">
         <Button.Label>This week</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handleSearch} variant="outline">
+        <Button.Label>Search</Button.Label>
       </Button>
       <Button className="mt-2" onPress={handleCatchUp} variant="outline">
         <Button.Label>Catch up</Button.Label>
