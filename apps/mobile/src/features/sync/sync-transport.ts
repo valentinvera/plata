@@ -19,6 +19,9 @@ export interface SyncApiClient {
     reset: {
       mutate: () => Promise<{ deleted: number }>
     }
+    reserveKey: {
+      mutate: (input: { keyId: string }) => Promise<{ keyId: string }>
+    }
   }
 }
 

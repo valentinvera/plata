@@ -1,15 +1,26 @@
+import { CryptoDigestAlgorithm, digestStringAsync } from "expo-crypto"
 import { Platform } from "react-native"
 
 import { getAppMeta, setAppMeta } from "../transactions/app-meta-repository"
 import { createId } from "../transactions/id"
-import { syncNow } from "./engine"
-import { clearSyncKey } from "./key-store"
+import { encodeSyncKey } from "./key"
+import {
+  clearSyncKey,
+  initializeSyncKey,
+  randomBytes,
+  readSyncKey,
+} from "./key-store"
+import { runSyncWithDeps } from "./sync-runner"
 import { clearSyncCursor, createTransactionSyncStore } from "./sync-store"
 import { createSyncTransport, type SyncApiClient } from "./sync-transport"
-import type { SyncCipher, SyncSummary } from "./types"
+import type { SyncSummary } from "./types"
 
 const DEVICE_ID_KEY = "sync_device_id"
 const SYNC_USER_KEY = "sync_user_id"
+
+function keyFingerprint(key: Uint8Array): Promise<string> {
+  return digestStringAsync(CryptoDigestAlgorithm.SHA256, encodeSyncKey(key))
+}
 
 export async function getOrCreateDeviceId(): Promise<string> {
   const existing = await getAppMeta(DEVICE_ID_KEY)
@@ -42,21 +53,23 @@ async function assertSyncUser(userId: string): Promise<void> {
 }
 
 // One sync pass for the local transactions, against the API client.
-export async function syncTransactions(
+export async function runSync(
   userId: string,
-  cipher: SyncCipher,
   client: SyncApiClient
 ): Promise<SyncSummary> {
   await assertSyncUser(userId)
 
   const deviceId = await getOrCreateDeviceId()
 
-  return syncNow({
-    cipher,
+  return runSyncWithDeps(client, {
+    createStore: () => createTransactionSyncStore(userId),
+    createTransport: createSyncTransport,
     deviceId,
+    initializeKey: initializeSyncKey,
+    keyId: keyFingerprint,
     platform: Platform.OS,
-    store: createTransactionSyncStore(userId),
-    transport: createSyncTransport(client),
+    randomBytes,
+    readKey: readSyncKey,
   })
 }
 

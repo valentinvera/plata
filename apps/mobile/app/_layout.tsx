@@ -9,6 +9,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
 import { AppThemeProvider } from "@/contexts/app-theme-context"
+import { useSyncOnForeground } from "@/src/features/sync/hooks"
 import { useAppMeta } from "@/src/features/transactions/hooks"
 import { registerNotificationListener } from "@/src/features/transactions/notification-listener"
 import {
@@ -80,6 +81,8 @@ function ShareIntentHandler() {
 }
 
 export default function Layout() {
+  useSyncOnForeground()
+
   // Background ingestion writes straight to SQLite, so refetch the cached
   // queries when the app returns to the foreground.
   useEffect(() => {

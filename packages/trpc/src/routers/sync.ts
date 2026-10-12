@@ -1,4 +1,4 @@
-import { device, encryptedBlob } from "@plata/db/schema/sync"
+import { device, encryptedBlob, syncAccount } from "@plata/db/schema/sync"
 import { and, asc, eq, gt, or, type SQL, sql } from "drizzle-orm"
 
 import { protectedProcedure, router } from "../index"
@@ -7,6 +7,7 @@ import {
   encodeCursor,
   pullInput,
   pushInput,
+  reserveKeyInput,
   type SyncBlobInput,
 } from "../sync"
 
@@ -114,6 +115,26 @@ export const syncRouter = router({
     return { accepted }
   }),
 
+  // Atomically claims the account's sync key identity. The first caller sets
+  // it; later callers get the stored fingerprint back, so a device can detect
+  // that its own key does not match and fail closed instead of uploading
+  // ciphertext other devices cannot decrypt.
+  reserveKey: protectedProcedure
+    .input(reserveKeyInput)
+    .mutation(async ({ ctx, input }) => {
+      const userId = ctx.session.user.id
+      const [row] = await ctx.db
+        .insert(syncAccount)
+        .values({ keyId: input.keyId, userId })
+        .onConflictDoUpdate({
+          set: { keyId: sql`${syncAccount.keyId}` },
+          target: syncAccount.userId,
+        })
+        .returning({ keyId: syncAccount.keyId })
+
+      return { keyId: row?.keyId ?? input.keyId }
+    }),
+
   // Wipes the user's ciphertext so a device that lost its sync key can start
   // fresh instead of generating a key that cannot decrypt existing blobs.
   reset: protectedProcedure.mutation(async ({ ctx }) => {
@@ -122,6 +143,8 @@ export const syncRouter = router({
       .delete(encryptedBlob)
       .where(eq(encryptedBlob.userId, userId))
       .returning({ id: encryptedBlob.id })
+
+    await ctx.db.delete(syncAccount).where(eq(syncAccount.userId, userId))
 
     return { deleted: deleted.length }
   }),
