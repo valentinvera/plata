@@ -3,8 +3,8 @@ import { QueryClient } from "@tanstack/react-query"
 import { createTRPCClient, httpBatchLink } from "@trpc/client"
 import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query"
 import { Platform } from "react-native"
-
 import { authClient } from "@/lib/auth-client"
+import type { SyncApiClient } from "@/src/features/sync/sync-transport"
 
 import { ENV } from "../src/env"
 
@@ -18,7 +18,7 @@ function platformFetch(input: RequestInfo | URL, init?: RequestInit) {
   })
 }
 
-const trpcClient = createTRPCClient<AppRouter>({
+export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
       fetch: platformFetch,
@@ -37,6 +37,9 @@ const trpcClient = createTRPCClient<AppRouter>({
     }),
   ],
 })
+
+// Compile-time guard: the API client must satisfy the sync transport contract.
+export const syncApiClient: SyncApiClient = trpcClient
 
 export const trpc = createTRPCOptionsProxy<AppRouter>({
   client: trpcClient,

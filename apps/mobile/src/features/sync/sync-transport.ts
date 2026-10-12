@@ -1,0 +1,27 @@
+import type { SyncBlob, SyncTransport } from "./types"
+
+// Minimal shape of the tRPC client the transport needs. `utils/trpc.ts` passes
+// the real client, which is structurally compatible.
+export interface SyncApiClient {
+  sync: {
+    pull: {
+      query: (input: {
+        since: string | null
+      }) => Promise<{ blobs: SyncBlob[]; cursor: string | null }>
+    }
+    push: {
+      mutate: (input: {
+        blobs: SyncBlob[]
+        deviceId: string
+        platform?: string
+      }) => Promise<{ applied: number }>
+    }
+  }
+}
+
+export function createSyncTransport(client: SyncApiClient): SyncTransport {
+  return {
+    pull: (input) => client.sync.pull.query({ since: input.since }),
+    push: (input) => client.sync.push.mutate(input),
+  }
+}
