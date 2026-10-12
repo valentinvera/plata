@@ -118,6 +118,10 @@ export default function TransactionsScreen() {
     router.push("/categories")
   }, [])
 
+  const handlePreferences = useCallback(() => {
+    router.push("/preferences")
+  }, [])
+
   const handleNotifications = useCallback(() => {
     router.push("/notifications")
   }, [])
@@ -206,6 +210,9 @@ export default function TransactionsScreen() {
       </Button>
       <Button className="mt-2" onPress={handleAccount} variant="outline">
         <Button.Label>Account</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handlePreferences} variant="outline">
+        <Button.Label>Preferences</Button.Label>
       </Button>
       {Platform.OS === "android" ? (
         <Button
