@@ -9,17 +9,19 @@ const KEY_NAME = "plata.sync.key"
 
 export const randomBytes: RandomBytes = (length) => getRandomBytes(length)
 
-// The sync key never leaves the device: it is generated once and kept in the
-// secure store, then used to encrypt every blob.
-export async function getOrCreateSyncKey(): Promise<Uint8Array> {
+let pendingKey: Promise<Uint8Array> | null = null
+
+export async function readSyncKey(): Promise<Uint8Array | null> {
   const stored = await getItemAsync(KEY_NAME)
 
-  if (stored) {
-    const key = decodeSyncKey(stored)
+  return stored ? decodeSyncKey(stored) : null
+}
 
-    if (key) {
-      return key
-    }
+async function generateAndStoreKey(): Promise<Uint8Array> {
+  const existing = await readSyncKey()
+
+  if (existing) {
+    return existing
   }
 
   const key = createSyncKey(randomBytes)
@@ -28,10 +30,33 @@ export async function getOrCreateSyncKey(): Promise<Uint8Array> {
   return key
 }
 
-export async function deleteSyncKey(): Promise<void> {
+// Serialized so concurrent first-use callers (e.g. foreground and manual sync)
+// share a single generated key instead of racing to overwrite each other.
+export function initializeSyncKey(): Promise<Uint8Array> {
+  if (!pendingKey) {
+    pendingKey = generateAndStoreKey().finally(() => {
+      pendingKey = null
+    })
+  }
+
+  return pendingKey
+}
+
+export async function clearSyncKey(): Promise<void> {
   await deleteItemAsync(KEY_NAME)
 }
 
+// Fails closed when no key exists: a fresh install must recover or explicitly
+// reset the account's ciphertext before a replacement key is generated, so we
+// never silently orphan data encrypted with the previous key.
 export async function createSyncCipher(): Promise<SyncCipher> {
-  return createCipher(await getOrCreateSyncKey(), randomBytes)
+  const key = await readSyncKey()
+
+  if (!key) {
+    throw new Error(
+      "No sync key on this device; recover or reset the sync data first"
+    )
+  }
+
+  return createCipher(key, randomBytes)
 }
