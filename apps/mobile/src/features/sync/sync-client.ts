@@ -3,7 +3,8 @@ import { Platform } from "react-native"
 import { getAppMeta, setAppMeta } from "../transactions/app-meta-repository"
 import { createId } from "../transactions/id"
 import { syncNow } from "./engine"
-import { createTransactionSyncStore } from "./sync-store"
+import { clearSyncKey } from "./key-store"
+import { clearSyncCursor, createTransactionSyncStore } from "./sync-store"
 import { createSyncTransport, type SyncApiClient } from "./sync-transport"
 import type { SyncCipher, SyncSummary } from "./types"
 
@@ -57,4 +58,19 @@ export async function syncTransactions(
     store: createTransactionSyncStore(userId),
     transport: createSyncTransport(client),
   })
+}
+
+// Start fresh: wipe the account's remote ciphertext and the local key/cursor so
+// a device without the original key can generate a new one safely.
+export async function resetSync(
+  userId: string,
+  client: SyncApiClient
+): Promise<number> {
+  const { deleted } = await client.sync.reset.mutate()
+
+  await clearSyncKey()
+  await clearSyncCursor(userId)
+  await setAppMeta(SYNC_USER_KEY, "")
+
+  return deleted
 }

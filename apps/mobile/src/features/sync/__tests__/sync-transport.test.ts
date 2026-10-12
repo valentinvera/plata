@@ -25,6 +25,7 @@ describe("createSyncTransport", () => {
             })
           },
         },
+        reset: { mutate: () => Promise.resolve({ deleted: 0 }) },
       },
     }
 
@@ -46,6 +47,7 @@ describe("createSyncTransport", () => {
             Promise.resolve({ blobs: [BLOB], cursor: `cursor-${input.since}` }),
         },
         push: { mutate: () => Promise.resolve({ accepted: [] }) },
+        reset: { mutate: () => Promise.resolve({ deleted: 0 }) },
       },
     }
 

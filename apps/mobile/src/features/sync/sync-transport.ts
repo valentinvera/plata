@@ -16,6 +16,9 @@ export interface SyncApiClient {
         platform?: string
       }) => Promise<{ accepted: string[] }>
     }
+    reset: {
+      mutate: () => Promise<{ deleted: number }>
+    }
   }
 }
 
