@@ -53,3 +53,13 @@ export const encryptedBlob = pgTable(
     ),
   ]
 )
+
+// One sync key identity per account. The server only stores a fingerprint so it
+// can reject a second device that would otherwise bootstrap a different key.
+export const syncAccount = pgTable("sync_accounts", {
+  keyId: text("key_id").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+})

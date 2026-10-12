@@ -26,6 +26,9 @@ describe("createSyncTransport", () => {
           },
         },
         reset: { mutate: () => Promise.resolve({ deleted: 0 }) },
+        reserveKey: {
+          mutate: (input) => Promise.resolve({ keyId: input.keyId }),
+        },
       },
     }
 
@@ -48,6 +51,9 @@ describe("createSyncTransport", () => {
         },
         push: { mutate: () => Promise.resolve({ accepted: [] }) },
         reset: { mutate: () => Promise.resolve({ deleted: 0 }) },
+        reserveKey: {
+          mutate: (input) => Promise.resolve({ keyId: input.keyId }),
+        },
       },
     }
 
