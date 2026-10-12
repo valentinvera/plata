@@ -1,16 +1,41 @@
-import { useEffect } from "react"
+import { useQueryClient } from "@tanstack/react-query"
+import { useEffect, useState } from "react"
 import { AppState, Platform } from "react-native"
 
 import { authClient } from "@/lib/auth-client"
+import { transactionsQueryKey } from "@/src/features/transactions/hooks"
 import { syncApiClient } from "@/utils/trpc"
 
 import { runSync } from "./sync-client"
+import { SyncKeyMismatchError, SyncKeyMissingError } from "./sync-runner"
+
+export type SyncStatus =
+  | "idle"
+  | "syncing"
+  | "key-missing"
+  | "key-mismatch"
+  | "error"
+
+function statusFor(error: unknown): SyncStatus {
+  if (error instanceof SyncKeyMissingError) {
+    return "key-missing"
+  }
+
+  if (error instanceof SyncKeyMismatchError) {
+    return "key-mismatch"
+  }
+
+  return "error"
+}
 
 // Syncs on mount and whenever the app returns to the foreground, once the user
-// is signed in. A failed pass is ignored here: it retries on the next trigger.
-export function useSyncOnForeground(): void {
+// is signed in. The returned status lets the UI route non-retryable key
+// failures (recovery/reset) while transient errors just retry next time.
+export function useSyncOnForeground(): SyncStatus {
+  const queryClient = useQueryClient()
   const { data: session } = authClient.useSession()
   const userId = session?.user.id ?? null
+  const [status, setStatus] = useState<SyncStatus>("idle")
 
   useEffect(() => {
     if (!userId || Platform.OS === "web") {
@@ -18,17 +43,28 @@ export function useSyncOnForeground(): void {
     }
 
     const sync = () => {
-      runSync(userId, syncApiClient).catch(() => undefined)
+      setStatus("syncing")
+      runSync(userId, syncApiClient)
+        .then(() => {
+          setStatus("idle")
+
+          return queryClient.invalidateQueries({
+            queryKey: transactionsQueryKey,
+          })
+        })
+        .catch((error: unknown) => setStatus(statusFor(error)))
     }
 
     sync()
 
-    const subscription = AppState.addEventListener("change", (status) => {
-      if (status === "active") {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") {
         sync()
       }
     })
 
     return () => subscription.remove()
-  }, [userId])
+  }, [queryClient, userId])
+
+  return status
 }
