@@ -1,3 +1,4 @@
+import type { Account } from "./accounts"
 import type { Category, Transaction } from "./types"
 
 export type ExportFormat = "csv" | "json"
@@ -21,42 +22,49 @@ const CSV_HEADER = [
   "state",
 ] as const
 
+// Spreadsheets treat cells starting with these as formulas, so they must be
+// neutralized even when quoted (CSV injection).
+const FORMULA_PREFIX = /^[=+\-@\t\r]/
 const CSV_SPECIALS = /[",\n\r]/
 const CSV_QUOTE = /"/g
 
 function escapeCsv(value: string): string {
-  return CSV_SPECIALS.test(value)
-    ? `"${value.replace(CSV_QUOTE, '""')}"`
-    : value
+  const neutralized = FORMULA_PREFIX.test(value) ? `'${value}` : value
+
+  return CSV_SPECIALS.test(neutralized)
+    ? `"${neutralized.replace(CSV_QUOTE, '""')}"`
+    : neutralized
 }
 
 function amountText(cents: number): string {
   return (cents / 100).toFixed(2)
 }
 
-function categoryName(
-  categoryId: string,
-  categories: readonly Category[]
+function lookupName(
+  id: string | null,
+  entries: readonly { id: string; name: string }[]
 ): string {
-  return (
-    categories.find((category) => category.id === categoryId)?.name ??
-    categoryId
-  )
+  if (!id) {
+    return ""
+  }
+
+  return entries.find((entry) => entry.id === id)?.name ?? id
 }
 
 export function transactionsToCsv(
   transactions: readonly Transaction[],
-  categories: readonly Category[]
+  categories: readonly Category[],
+  accounts: readonly Account[]
 ): string {
   const rows = transactions.map((transaction) => [
     new Date(transaction.occurredAt).toISOString(),
     amountText(transaction.amount),
     transaction.currency,
     transaction.kind,
-    categoryName(transaction.categoryId, categories),
+    lookupName(transaction.categoryId, categories),
     transaction.merchant ?? "",
     transaction.note ?? "",
-    transaction.accountId ?? "",
+    lookupName(transaction.accountId, accounts),
     transaction.source,
     transaction.state,
   ])
@@ -67,26 +75,28 @@ export function transactionsToCsv(
 }
 
 export function transactionsToJson(
-  transactions: readonly Transaction[]
+  transactions: readonly Transaction[],
+  accounts: readonly Account[]
 ): string {
-  return JSON.stringify({ transactions, version: 1 }, null, 2)
+  return JSON.stringify({ accounts, transactions, version: 1 }, null, 2)
 }
 
 export function buildExport(
   format: ExportFormat,
   transactions: readonly Transaction[],
-  categories: readonly Category[]
+  categories: readonly Category[],
+  accounts: readonly Account[]
 ): ExportBundle {
   if (format === "json") {
     return {
-      content: transactionsToJson(transactions),
+      content: transactionsToJson(transactions, accounts),
       filename: "plata-transactions.json",
       mimeType: "application/json",
     }
   }
 
   return {
-    content: transactionsToCsv(transactions, categories),
+    content: transactionsToCsv(transactions, categories, accounts),
     filename: "plata-transactions.csv",
     mimeType: "text/csv",
   }
