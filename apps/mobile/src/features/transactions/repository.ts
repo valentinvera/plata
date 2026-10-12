@@ -115,6 +115,15 @@ export async function listTransactions(
   return rows.map(rowToTransaction)
 }
 
+export async function listAllTransactions(): Promise<Transaction[]> {
+  const database = await getDatabase()
+  const rows = await database.getAllAsync<TransactionRow>(
+    `SELECT ${TRANSACTION_COLUMNS} FROM transactions WHERE deleted_at IS NULL ORDER BY occurred_at DESC`
+  )
+
+  return rows.map(rowToTransaction)
+}
+
 export async function listTransactionsInRange(
   start: number,
   end: number
