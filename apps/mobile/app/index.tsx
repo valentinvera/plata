@@ -218,9 +218,11 @@ export default function TransactionsScreen() {
       <Button className="mt-2" onPress={handlePreferences} variant="outline">
         <Button.Label>Preferences</Button.Label>
       </Button>
-      <Button className="mt-2" onPress={handleExport} variant="outline">
-        <Button.Label>Export</Button.Label>
-      </Button>
+      {Platform.OS === "web" ? null : (
+        <Button className="mt-2" onPress={handleExport} variant="outline">
+          <Button.Label>Export</Button.Label>
+        </Button>
+      )}
       {Platform.OS === "android" ? (
         <Button
           className="mt-2"

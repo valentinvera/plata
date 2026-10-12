@@ -1,6 +1,6 @@
 import { Button, Card, Spinner } from "heroui-native"
 import { useCallback, useState } from "react"
-import { Text, View } from "react-native"
+import { Platform, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
 import type { ExportFormat } from "@/src/features/transactions/export"
@@ -37,6 +37,17 @@ export default function ExportScreen() {
   }, [])
 
   const busy = busyFormat !== null
+
+  if (Platform.OS === "web") {
+    return (
+      <Container className="px-5">
+        <Text className="pt-3 font-bold text-2xl text-foreground">Export</Text>
+        <Text className="mt-2 text-muted text-sm">
+          Exporting is available in the mobile app.
+        </Text>
+      </Container>
+    )
+  }
 
   return (
     <Container className="px-5">
