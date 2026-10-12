@@ -141,3 +141,7 @@ export function createTransactionSyncStore(userId: string): SyncStore {
     setCursor: (cursor) => setAppMeta(cursorKey, cursor ?? ""),
   }
 }
+
+export async function clearSyncCursor(userId: string): Promise<void> {
+  await setAppMeta(`${CURSOR_KEY}:${userId}`, "")
+}

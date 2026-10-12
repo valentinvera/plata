@@ -113,4 +113,16 @@ export const syncRouter = router({
 
     return { accepted }
   }),
+
+  // Wipes the user's ciphertext so a device that lost its sync key can start
+  // fresh instead of generating a key that cannot decrypt existing blobs.
+  reset: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.session.user.id
+    const deleted = await ctx.db
+      .delete(encryptedBlob)
+      .where(eq(encryptedBlob.userId, userId))
+      .returning({ id: encryptedBlob.id })
+
+    return { deleted: deleted.length }
+  }),
 })
