@@ -70,17 +70,26 @@ function BudgetRow({ progress }: { progress: BudgetProgress }) {
           : "No limit"}
       </Text>
       {status === "exceeded" ? (
-        <Text className="mt-1 text-destructive text-xs">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-1 text-destructive text-xs"
+        >
           Over budget by {formatAmount(Math.abs(remaining), DEFAULT_CURRENCY)}
         </Text>
       ) : null}
       {status === "warning" ? (
-        <Text className="mt-1 text-destructive text-xs">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-1 text-destructive text-xs"
+        >
           Near limit · {formatAmount(remaining, DEFAULT_CURRENCY)} left
         </Text>
       ) : null}
       {status === "on_track" ? (
-        <Text className="mt-1 text-muted text-xs">
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-1 text-muted text-xs"
+        >
           {formatAmount(remaining, DEFAULT_CURRENCY)} left
         </Text>
       ) : null}
@@ -162,7 +171,10 @@ export default function BudgetsScreen() {
             {formatAmount(summary.spent, DEFAULT_CURRENCY)} of{" "}
             {formatAmount(summary.budgeted, DEFAULT_CURRENCY)}
           </Text>
-          <Text className="mt-1 text-muted text-xs">
+          <Text
+            accessibilityLiveRegion="polite"
+            className="mt-1 text-muted text-xs"
+          >
             {summary.remaining >= 0
               ? `${formatAmount(summary.remaining, DEFAULT_CURRENCY)} left this month`
               : `${formatAmount(Math.abs(summary.remaining), DEFAULT_CURRENCY)} over budget`}
