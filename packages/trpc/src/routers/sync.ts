@@ -148,7 +148,12 @@ export const syncRouter = router({
           updatedAt: new Date(),
           wrappedKey: Buffer.from(input.wrappedKey, "base64"),
         })
-        .where(eq(syncAccount.userId, userId))
+        .where(
+          and(
+            eq(syncAccount.userId, userId),
+            eq(syncAccount.keyId, input.keyId)
+          )
+        )
         .returning({ userId: syncAccount.userId })
 
       return { stored: rows.length > 0 }

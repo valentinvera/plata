@@ -30,9 +30,14 @@ export async function backupSyncKey(
     throw new SyncKeyMismatchError()
   }
 
-  await client.sync.storeRecovery.mutate({
+  const { stored } = await client.sync.storeRecovery.mutate({
+    keyId,
     wrappedKey: wrapSyncKey(syncKey, recoveryKey, randomBytes),
   })
+
+  if (!stored) {
+    throw new SyncKeyMismatchError()
+  }
 }
 
 // Restores the sync key from the server using the recovery secret. Returns

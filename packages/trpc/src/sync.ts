@@ -45,6 +45,7 @@ export const reserveKeyInput = z.object({
 })
 
 export const storeRecoveryInput = z.object({
+  keyId: z.string().min(1).max(128),
   wrappedKey: z.base64().min(1).max(1024),
 })
 
