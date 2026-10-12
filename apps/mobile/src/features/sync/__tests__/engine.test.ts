@@ -1,8 +1,13 @@
 import { describe, expect, it } from "bun:test"
+import {
+  base64DecodedLength,
+  MAX_BLOBS_PER_PUSH,
+  MAX_PUSH_BYTES,
+} from "@plata/trpc/sync"
 
 import { encodeRecord } from "../codec"
 import { createCipher } from "../crypto"
-import { syncNow } from "../engine"
+import { planPushBatches, syncNow } from "../engine"
 import type { SyncBlob, SyncRecord, SyncStore, SyncTransport } from "../types"
 
 const cipher = createCipher(new Uint8Array(32).fill(5), (length) =>
@@ -40,9 +45,13 @@ function createStore(initial: SyncRecord[] = []) {
           .map((id) => records.get(id))
           .filter((value): value is SyncRecord => Boolean(value))
       ),
-    markSynced: (ids) => {
-      for (const id of ids) {
-        dirty.delete(id)
+    markSynced: (versions) => {
+      for (const version of versions) {
+        const current = records.get(version.id)
+
+        if (current && current.updatedAt === version.updatedAt) {
+          dirty.delete(version.id)
+        }
       }
 
       return Promise.resolve()
@@ -54,11 +63,12 @@ function createStore(initial: SyncRecord[] = []) {
     },
   }
 
-  return { applied, dirty, store, getCursor: () => cursor }
+  return { applied, dirty, records, store, getCursor: () => cursor }
 }
 
 function createTransport(
-  responses: { blobs?: SyncBlob[]; cursor?: string | null }[] = []
+  responses: { blobs?: SyncBlob[]; cursor?: string | null }[] = [],
+  onPush?: () => void
 ) {
   const pushes: { blobs: SyncBlob[]; deviceId: string }[] = []
   let index = 0
@@ -75,6 +85,7 @@ function createTransport(
     },
     push: (input) => {
       pushes.push(input)
+      onPush?.()
 
       return Promise.resolve({ applied: input.blobs.length })
     },
@@ -108,6 +119,41 @@ describe("syncNow", () => {
     await syncNow({ cipher, deviceId: "device-1", store, transport })
 
     expect(pushes).toHaveLength(0)
+  })
+
+  it("splits a large backlog into batches that respect the server caps", async () => {
+    const records = Array.from({ length: 250 }, (_, index) =>
+      record({ id: `tx-${index}` })
+    )
+    const { store } = createStore(records)
+    const { pushes, transport } = createTransport([{ blobs: [], cursor: null }])
+
+    const summary = await syncNow({
+      cipher,
+      deviceId: "device-1",
+      store,
+      transport,
+    })
+
+    expect(pushes.map((push) => push.blobs.length)).toEqual([100, 100, 50])
+    expect(summary.pushed).toBe(250)
+  })
+
+  it("does not acknowledge a record edited while the push was in flight", async () => {
+    const { dirty, records, store } = createStore([record()])
+    const { transport } = createTransport([{ blobs: [], cursor: null }], () => {
+      records.set("tx-1", record({ updatedAt: 200 }))
+    })
+
+    const summary = await syncNow({
+      cipher,
+      deviceId: "device-1",
+      store,
+      transport,
+    })
+
+    expect(summary.pushed).toBe(1)
+    expect(dirty.has("tx-1")).toBe(true)
   })
 
   it("applies pulled records and stores the cursor", async () => {
@@ -147,5 +193,34 @@ describe("syncNow", () => {
     expect(applied).toEqual([])
     expect(summary.applied).toBe(0)
     expect(summary.pulled).toBe(1)
+  })
+})
+
+describe("planPushBatches", () => {
+  it("caps each batch by the per-push payload size", () => {
+    const payload = "x".repeat(60 * 1024)
+    const records = Array.from({ length: 100 }, (_, index) =>
+      record({ id: `tx-${index}`, payload })
+    )
+
+    const batches = planPushBatches(records, cipher)
+
+    expect(batches.length).toBeGreaterThan(1)
+
+    for (const batch of batches) {
+      const total = batch.blobs.reduce(
+        (sum, blob) => sum + base64DecodedLength(blob.ciphertext),
+        0
+      )
+
+      expect(batch.blobs.length).toBeLessThanOrEqual(MAX_BLOBS_PER_PUSH)
+      expect(total).toBeLessThanOrEqual(MAX_PUSH_BYTES)
+    }
+  })
+
+  it("rejects a record larger than the per-blob cap", () => {
+    const payload = "x".repeat(70 * 1024)
+
+    expect(() => planPushBatches([record({ payload })], cipher)).toThrow()
   })
 })

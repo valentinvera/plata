@@ -5,11 +5,12 @@ import { z } from "zod"
 
 // Transactions are tiny, so a small per-blob cap is plenty. 64 KiB decoded
 // per blob, at most 100 blobs and 4 MiB per push keeps requests bounded.
-const MAX_BLOB_BYTES = 64 * 1024
-const MAX_BLOBS_PER_PUSH = 100
-const MAX_PUSH_BYTES = 4 * 1024 * 1024
+// The mobile sync client imports these so its batches never exceed the limits.
+export const MAX_BLOB_BYTES = 64 * 1024
+export const MAX_BLOBS_PER_PUSH = 100
+export const MAX_PUSH_BYTES = 4 * 1024 * 1024
 // base64 expands to roughly 4/3 of the decoded size.
-const MAX_BLOB_BASE64_LENGTH = Math.ceil(MAX_BLOB_BYTES / 3) * 4
+export const MAX_BLOB_BASE64_LENGTH = Math.ceil(MAX_BLOB_BYTES / 3) * 4
 
 const blobInput = z.object({
   ciphertext: z.base64().min(1).max(MAX_BLOB_BASE64_LENGTH),
@@ -48,7 +49,7 @@ export interface SyncCursor {
   updatedAt: Date
 }
 
-function base64DecodedLength(value: string): number {
+export function base64DecodedLength(value: string): number {
   if (value.endsWith("==")) {
     return (value.length * 3) / 4 - 2
   }

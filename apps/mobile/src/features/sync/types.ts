@@ -17,12 +17,17 @@ export interface SyncCipher {
   encrypt: (plaintext: Uint8Array) => Uint8Array
 }
 
+export interface SyncVersion {
+  id: string
+  updatedAt: number
+}
+
 export interface SyncStore {
   applyRemote: (record: SyncRecord) => Promise<void>
   getCursor: () => Promise<string | null>
   getRecord: (id: string) => Promise<SyncRecord | null>
   listDirty: () => Promise<SyncRecord[]>
-  markSynced: (ids: readonly string[]) => Promise<void>
+  markSynced: (versions: readonly SyncVersion[]) => Promise<void>
   setCursor: (cursor: string | null) => Promise<void>
 }
 
