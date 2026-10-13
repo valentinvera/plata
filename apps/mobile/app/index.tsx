@@ -220,6 +220,10 @@ export default function TransactionsScreen() {
     router.push("/recurring")
   }, [])
 
+  const handleInsights = useCallback(() => {
+    router.push("/insights")
+  }, [])
+
   const handleNotifications = useCallback(() => {
     router.push("/notifications")
   }, [])
@@ -325,6 +329,7 @@ export default function TransactionsScreen() {
       <NavSection
         actions={[
           { label: "This week", onPress: handleWeek },
+          { label: "Insights", onPress: handleInsights },
           { label: "Recurring", onPress: handleRecurring },
           { label: "Duplicates", onPress: handleDuplicates },
           { label: "Search", onPress: handleSearch },
