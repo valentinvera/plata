@@ -190,6 +190,10 @@ export default function TransactionsScreen() {
     router.push("/duplicates")
   }, [])
 
+  const handleRecurring = useCallback(() => {
+    router.push("/recurring")
+  }, [])
+
   const handleNotifications = useCallback(() => {
     router.push("/notifications")
   }, [])
@@ -312,6 +316,9 @@ export default function TransactionsScreen() {
       )}
       <Button className="mt-2" onPress={handleDuplicates} variant="outline">
         <Button.Label>Duplicates</Button.Label>
+      </Button>
+      <Button className="mt-2" onPress={handleRecurring} variant="outline">
+        <Button.Label>Recurring</Button.Label>
       </Button>
       {Platform.OS === "android" ? (
         <Button
