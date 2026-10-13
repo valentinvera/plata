@@ -57,6 +57,32 @@ function changeLabel(ratio: number | null): string {
     : ` · ${percent}% vs last month`
 }
 
+interface NavAction {
+  label: string
+  onPress: () => void
+}
+
+function NavSection({
+  actions,
+  title,
+}: {
+  actions: readonly NavAction[]
+  title: string
+}) {
+  return (
+    <View className="mt-4">
+      <Text className="mb-2 text-muted text-sm">{title}</Text>
+      <View className="flex-row flex-wrap gap-2">
+        {actions.map((action) => (
+          <Button key={action.label} onPress={action.onPress} variant="outline">
+            <Button.Label>{action.label}</Button.Label>
+          </Button>
+        ))}
+      </View>
+    </View>
+  )
+}
+
 interface TransactionSection {
   data: Transaction[]
   title: string
@@ -285,50 +311,40 @@ export default function TransactionsScreen() {
       <Button className="mt-4" onPress={handleAdd}>
         <Button.Label>Add transaction</Button.Label>
       </Button>
-      <Button className="mt-2" onPress={handleWeek} variant="outline">
-        <Button.Label>This week</Button.Label>
-      </Button>
-      <Button className="mt-2" onPress={handleSearch} variant="outline">
-        <Button.Label>Search</Button.Label>
-      </Button>
-      <Button className="mt-2" onPress={handleCatchUp} variant="outline">
-        <Button.Label>Catch up</Button.Label>
-      </Button>
-      <Button className="mt-2" onPress={handleBudgets} variant="outline">
-        <Button.Label>Budgets</Button.Label>
-      </Button>
-      <Button className="mt-2" onPress={handleCategories} variant="outline">
-        <Button.Label>Categories</Button.Label>
-      </Button>
-      <Button className="mt-2" onPress={handleAccounts} variant="outline">
-        <Button.Label>Accounts</Button.Label>
-      </Button>
-      <Button className="mt-2" onPress={handleAccount} variant="outline">
-        <Button.Label>Account</Button.Label>
-      </Button>
-      <Button className="mt-2" onPress={handlePreferences} variant="outline">
-        <Button.Label>Preferences</Button.Label>
-      </Button>
-      {Platform.OS === "web" ? null : (
-        <Button className="mt-2" onPress={handleExport} variant="outline">
-          <Button.Label>Export</Button.Label>
-        </Button>
-      )}
-      <Button className="mt-2" onPress={handleDuplicates} variant="outline">
-        <Button.Label>Duplicates</Button.Label>
-      </Button>
-      <Button className="mt-2" onPress={handleRecurring} variant="outline">
-        <Button.Label>Recurring</Button.Label>
-      </Button>
-      {Platform.OS === "android" ? (
-        <Button
-          className="mt-2"
-          onPress={handleNotifications}
-          variant="outline"
-        >
-          <Button.Label>Automatic import</Button.Label>
-        </Button>
-      ) : null}
+
+      <NavSection
+        actions={[
+          { label: "Catch up", onPress: handleCatchUp },
+          { label: "Budgets", onPress: handleBudgets },
+          { label: "Categories", onPress: handleCategories },
+          { label: "Preferences", onPress: handlePreferences },
+        ]}
+        title="Plan"
+      />
+
+      <NavSection
+        actions={[
+          { label: "This week", onPress: handleWeek },
+          { label: "Recurring", onPress: handleRecurring },
+          { label: "Duplicates", onPress: handleDuplicates },
+          { label: "Search", onPress: handleSearch },
+        ]}
+        title="Activity"
+      />
+
+      <NavSection
+        actions={[
+          { label: "Accounts", onPress: handleAccounts },
+          { label: "Account", onPress: handleAccount },
+          ...(Platform.OS === "web"
+            ? []
+            : [{ label: "Export", onPress: handleExport }]),
+          ...(Platform.OS === "android"
+            ? [{ label: "Automatic import", onPress: handleNotifications }]
+            : []),
+        ]}
+        title="Data"
+      />
 
       <Text className="mt-4 mb-2 text-muted text-sm">Filter by account</Text>
       <ScrollView
