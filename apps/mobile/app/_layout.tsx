@@ -4,7 +4,7 @@ import { router, Stack } from "expo-router"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
 import { HeroUINativeProvider } from "heroui-native"
 import { useEffect } from "react"
-import { AppState, Platform } from "react-native"
+import { Alert, AppState, Platform } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
@@ -12,11 +12,15 @@ import { AppThemeProvider } from "@/contexts/app-theme-context"
 import { useSyncOnForeground } from "@/src/features/sync/hooks"
 import { useAppMeta } from "@/src/features/transactions/hooks"
 import { registerNotificationListener } from "@/src/features/transactions/notification-listener"
+import { recognizeTransactionText } from "@/src/features/transactions/ocr-recognize"
 import {
   ONBOARDING_COMPLETED_KEY,
   shouldShowOnboarding,
 } from "@/src/features/transactions/onboarding"
-import { getSharedText } from "@/src/features/transactions/share"
+import {
+  getSharedImageUrl,
+  getSharedText,
+} from "@/src/features/transactions/share"
 import { queryClient } from "@/utils/trpc"
 
 // Register early so the headless task is available even when the app is closed.
@@ -62,12 +66,13 @@ function ShareIntentHandler() {
   const { hasShareIntent, resetShareIntent, shareIntent } =
     useShareIntentContext()
   const sharedText = getSharedText(shareIntent)
+  const sharedImage = getSharedImageUrl(shareIntent)
   const { data: onboardingValue, isLoading } = useAppMeta(
     ONBOARDING_COMPLETED_KEY
   )
 
   useEffect(() => {
-    if (!(hasShareIntent && sharedText) || isLoading) {
+    if (!hasShareIntent || isLoading) {
       return
     }
 
@@ -78,12 +83,60 @@ function ShareIntentHandler() {
       return
     }
 
-    router.push({
-      pathname: "/add-transaction",
-      params: { text: sharedText },
-    })
-    resetShareIntent()
-  }, [hasShareIntent, isLoading, onboardingValue, resetShareIntent, sharedText])
+    if (sharedText) {
+      router.push({
+        pathname: "/add-transaction",
+        params: { text: sharedText },
+      })
+      resetShareIntent()
+      return
+    }
+
+    if (!sharedImage) {
+      return
+    }
+
+    // iOS screenshots arrive as images: OCR them before opening the form.
+    let cancelled = false
+
+    const importImage = async () => {
+      let text: string | null = null
+
+      try {
+        text = await recognizeTransactionText(sharedImage)
+      } catch {
+        text = null
+      }
+
+      if (cancelled) {
+        return
+      }
+
+      if (text) {
+        router.push({ pathname: "/add-transaction", params: { text } })
+      } else {
+        Alert.alert(
+          "Could not read the image",
+          "We could not find a transaction in that screenshot. Try a clearer image or add it manually."
+        )
+      }
+
+      resetShareIntent()
+    }
+
+    importImage().catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    hasShareIntent,
+    isLoading,
+    onboardingValue,
+    resetShareIntent,
+    sharedImage,
+    sharedText,
+  ])
 
   return null
 }
