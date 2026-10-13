@@ -11,7 +11,6 @@ import { KeyboardProvider } from "react-native-keyboard-controller"
 import { AppThemeProvider } from "@/contexts/app-theme-context"
 import { useSyncOnForeground } from "@/src/features/sync/hooks"
 import { useAppMeta } from "@/src/features/transactions/hooks"
-import { registerNotificationListener } from "@/src/features/transactions/notification-listener"
 import { recognizeTransactionText } from "@/src/features/transactions/ocr-recognize"
 import {
   ONBOARDING_COMPLETED_KEY,
@@ -24,7 +23,7 @@ import {
 import { queryClient } from "@/utils/trpc"
 
 // Register early so the headless task is available even when the app is closed.
-registerNotificationListener()
+// (Done in the bundle entry `index.js`, which also runs in the headless context.)
 
 function StackLayout() {
   return (
@@ -141,9 +140,12 @@ function ShareIntentHandler() {
   return null
 }
 
-export default function Layout() {
+function SyncHandler() {
   useSyncOnForeground()
+  return null
+}
 
+export default function Layout() {
   // Background ingestion writes straight to SQLite, so refetch the cached
   // queries when the app returns to the foreground.
   useEffect(() => {
@@ -166,6 +168,7 @@ export default function Layout() {
             <AppThemeProvider>
               <HeroUINativeProvider>
                 <StackLayout />
+                <SyncHandler />
                 <ShareIntentHandler />
               </HeroUINativeProvider>
             </AppThemeProvider>
