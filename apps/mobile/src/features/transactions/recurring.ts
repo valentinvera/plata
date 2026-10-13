@@ -4,6 +4,7 @@ import type { Currency, Transaction } from "./types"
 export type RecurringCadence = "weekly" | "monthly"
 
 export interface RecurringPayment {
+  accountId: string | null
   averageAmount: number
   cadence: RecurringCadence
   categoryId: string
@@ -132,6 +133,7 @@ export function detectRecurring(
     const total = amounts.reduce((sum, amount) => sum + amount, 0)
 
     payments.push({
+      accountId: latest.accountId,
       averageAmount: Math.round(total / amounts.length),
       cadence,
       categoryId: latest.categoryId,
