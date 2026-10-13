@@ -9,8 +9,9 @@ export interface CapturedNotification {
 }
 
 declare class NotificationCaptureModule extends NativeModule {
-  drainAsync(): Promise<string>
+  ackAsync(): Promise<void>
   getPermissionStatusAsync(): Promise<string>
+  readPendingsAsync(): Promise<string>
   requestPermission(): void
 }
 

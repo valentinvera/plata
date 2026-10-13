@@ -36,13 +36,14 @@ function toPayload(item: CapturedNotification): NotificationPayload {
 }
 
 // Turns the notifications captured while the app was away into suggestions.
-// Returns how many were ingested.
+// Returns how many were ingested. The native queue is only acknowledged after
+// processing, so a crash mid-drain re-processes (idempotently) next time.
 export async function drainCapturedNotifications(): Promise<number> {
   if (Platform.OS !== "android" || !NotificationCapture) {
     return 0
   }
 
-  const raw = await NotificationCapture.drainAsync()
+  const raw = await NotificationCapture.readPendingsAsync()
   let items: unknown
 
   try {
@@ -66,6 +67,8 @@ export async function drainCapturedNotifications(): Promise<number> {
       ingested += 1
     }
   }
+
+  await NotificationCapture.ackAsync()
 
   return ingested
 }
