@@ -1,18 +1,14 @@
 import { listCategories } from "./category-repository"
 import {
   buildNotificationTransaction,
+  type NotificationPayload,
   notificationTransactionId,
-  parseNotificationPayload,
 } from "./notification"
 import { createTransaction, getTransaction } from "./repository"
 
-export async function ingestNotification(raw: string): Promise<boolean> {
-  const payload = parseNotificationPayload(raw)
-
-  if (!payload) {
-    return false
-  }
-
+export async function ingestNotificationPayload(
+  payload: NotificationPayload
+): Promise<boolean> {
   const transaction = buildNotificationTransaction(
     payload,
     Date.now(),

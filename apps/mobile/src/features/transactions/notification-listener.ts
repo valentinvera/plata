@@ -1,48 +1,71 @@
-import { AppRegistry, Platform } from "react-native"
-import RNAndroidNotificationListener, {
-  RNAndroidNotificationListenerHeadlessJsName,
-} from "react-native-android-notification-listener"
+import { Platform } from "react-native"
 
-import { ingestNotification } from "./notification-ingest"
+import NotificationCapture, {
+  type CapturedNotification,
+} from "@/modules/notification-capture/src/notification-capture-module"
+
+import type { NotificationPayload } from "./notification"
+import { ingestNotificationPayload } from "./notification-ingest"
 
 export type NotificationPermission = "authorized" | "denied" | "unknown"
 
-interface HeadlessNotificationData {
-  notification?: string
-}
-
-async function handleHeadlessNotification({
-  notification,
-}: HeadlessNotificationData): Promise<void> {
-  if (notification) {
-    await ingestNotification(notification)
-  }
-}
-
-let isRegistered = false
-
-export function registerNotificationListener(): void {
-  if (isRegistered || Platform.OS !== "android") {
-    return
+export async function getNotificationPermission(): Promise<NotificationPermission> {
+  if (Platform.OS !== "android" || !NotificationCapture) {
+    return "unknown"
   }
 
-  isRegistered = true
-  AppRegistry.registerHeadlessTask(
-    RNAndroidNotificationListenerHeadlessJsName,
-    () => handleHeadlessNotification
-  )
-}
+  const status = await NotificationCapture.getPermissionStatusAsync()
 
-export function getNotificationPermission(): Promise<NotificationPermission> {
-  if (Platform.OS !== "android") {
-    return Promise.resolve("unknown")
-  }
-
-  return RNAndroidNotificationListener.getPermissionStatus()
+  return status === "authorized" || status === "denied" ? status : "unknown"
 }
 
 export function openNotificationSettings(): void {
   if (Platform.OS === "android") {
-    RNAndroidNotificationListener.requestPermission()
+    NotificationCapture?.requestPermission()
   }
+}
+
+function toPayload(item: CapturedNotification): NotificationPayload {
+  return {
+    app: item.app,
+    bigText: item.bigText,
+    text: item.text,
+    time: item.time,
+    title: item.title,
+  }
+}
+
+// Turns the notifications captured while the app was away into suggestions.
+// Returns how many were ingested.
+export async function drainCapturedNotifications(): Promise<number> {
+  if (Platform.OS !== "android" || !NotificationCapture) {
+    return 0
+  }
+
+  const raw = await NotificationCapture.drainAsync()
+  let items: unknown
+
+  try {
+    items = JSON.parse(raw)
+  } catch {
+    return 0
+  }
+
+  if (!Array.isArray(items)) {
+    return 0
+  }
+
+  let ingested = 0
+
+  for (const item of items) {
+    const payload = toPayload(item as CapturedNotification)
+    // biome-ignore lint/performance/noAwaitInLoops: SQLite writes stay sequential
+    const accepted = await ingestNotificationPayload(payload)
+
+    if (accepted) {
+      ingested += 1
+    }
+  }
+
+  return ingested
 }
