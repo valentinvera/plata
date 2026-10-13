@@ -38,6 +38,7 @@ function StackLayout() {
       <Stack.Screen name="categories" options={{ title: "Categories" }} />
       <Stack.Screen name="preferences" options={{ title: "Preferences" }} />
       <Stack.Screen name="export" options={{ title: "Export" }} />
+      <Stack.Screen name="duplicates" options={{ title: "Duplicates" }} />
       <Stack.Screen
         name="notifications"
         options={{ title: "Automatic import" }}
