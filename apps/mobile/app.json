@@ -2,7 +2,7 @@
   "expo": {
     "name": "plata",
     "slug": "plata",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "plata",
@@ -58,8 +58,9 @@
       [
         "expo-share-intent",
         {
-          "androidIntentFilters": ["text/*"],
+          "androidIntentFilters": ["text/*", "image/*"],
           "iosActivationRules": {
+            "NSExtensionActivationSupportsImageWithMaxCount": 1,
             "NSExtensionActivationSupportsText": true
           }
         }
