@@ -40,6 +40,7 @@ function StackLayout() {
       <Stack.Screen name="export" options={{ title: "Export" }} />
       <Stack.Screen name="duplicates" options={{ title: "Duplicates" }} />
       <Stack.Screen name="recurring" options={{ title: "Recurring" }} />
+      <Stack.Screen name="insights" options={{ title: "Insights" }} />
       <Stack.Screen
         name="notifications"
         options={{ title: "Automatic import" }}

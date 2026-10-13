@@ -2,6 +2,7 @@ import { Redirect, router, useFocusEffect } from "expo-router"
 import { Button, Card, Chip, Spinner } from "heroui-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
+  AppState,
   Platform,
   Pressable,
   ScrollView,
@@ -116,6 +117,17 @@ export default function TransactionsScreen() {
     }, [])
   )
 
+  // ...and when the app is resumed without a navigation change.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (status) => {
+      if (status === "active") {
+        setNow(Date.now())
+      }
+    })
+
+    return () => subscription.remove()
+  }, [])
+
   const currentMonth = useMemo(() => monthRange(now), [now])
   const previousMonth = useMemo(
     () => monthRange(currentMonth.start - 1),
@@ -218,6 +230,10 @@ export default function TransactionsScreen() {
 
   const handleRecurring = useCallback(() => {
     router.push("/recurring")
+  }, [])
+
+  const handleInsights = useCallback(() => {
+    router.push("/insights")
   }, [])
 
   const handleNotifications = useCallback(() => {
@@ -325,6 +341,7 @@ export default function TransactionsScreen() {
       <NavSection
         actions={[
           { label: "This week", onPress: handleWeek },
+          { label: "Insights", onPress: handleInsights },
           { label: "Recurring", onPress: handleRecurring },
           { label: "Duplicates", onPress: handleDuplicates },
           { label: "Search", onPress: handleSearch },
