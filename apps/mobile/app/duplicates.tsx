@@ -74,10 +74,13 @@ export default function DuplicatesScreen() {
           {group.transactions.map((transaction) => (
             <View className="mt-2" key={transaction.id}>
               <View className="flex-row items-center justify-between">
-                <Text className="font-medium text-foreground">
+                <Text
+                  className="flex-1 font-medium text-foreground"
+                  numberOfLines={1}
+                >
                   {transaction.merchant ?? "No merchant"}
                 </Text>
-                <Text className="text-foreground">
+                <Text className="ml-3 text-foreground">
                   {formatAmount(transaction.amount, transaction.currency)}
                 </Text>
               </View>

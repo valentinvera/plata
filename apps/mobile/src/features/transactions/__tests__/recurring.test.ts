@@ -188,4 +188,37 @@ describe("detectRecurring", () => {
 
     expect(detectRecurring(transactions)).toHaveLength(1)
   })
+
+  it("keeps separate accounts apart", () => {
+    const transactions = [
+      makeTransaction({ accountId: "card", id: "a", occurredAt: START }),
+      makeTransaction({
+        accountId: "card",
+        id: "b",
+        occurredAt: START + 30 * DAY,
+      }),
+      makeTransaction({
+        accountId: "card",
+        id: "c",
+        occurredAt: START + 60 * DAY,
+      }),
+      makeTransaction({
+        accountId: "cash",
+        id: "d",
+        occurredAt: START + 15 * DAY,
+      }),
+      makeTransaction({
+        accountId: "cash",
+        id: "e",
+        occurredAt: START + 45 * DAY,
+      }),
+      makeTransaction({
+        accountId: "cash",
+        id: "f",
+        occurredAt: START + 75 * DAY,
+      }),
+    ]
+
+    expect(detectRecurring(transactions)).toHaveLength(2)
+  })
 })

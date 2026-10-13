@@ -70,7 +70,9 @@ function hasStableAmount(amounts: readonly number[]): boolean {
 function groupKey(transaction: Transaction): string | null {
   const merchant = transaction.merchant?.trim()
 
-  return merchant ? `${transaction.currency}|${normalizeText(merchant)}` : null
+  return merchant
+    ? `${transaction.currency}|${transaction.accountId ?? "none"}|${normalizeText(merchant)}`
+    : null
 }
 
 // Detects subscriptions and regular bills: expenses to the same merchant, in the
