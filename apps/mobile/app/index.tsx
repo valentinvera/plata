@@ -1,4 +1,4 @@
-import { Redirect, router } from "expo-router"
+import { Redirect, router, useFocusEffect } from "expo-router"
 import { Button, Card, Chip, Spinner } from "heroui-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
@@ -24,11 +24,11 @@ import { formatAmount } from "@/src/features/transactions/format"
 import { computeHighlights } from "@/src/features/transactions/highlights"
 import {
   useAccounts,
+  useAllTransactions,
   useAppMeta,
   useCategories,
   useConfirmedTransactions,
   useSuggestedTransactions,
-  useTransactions,
   useTransactionsInRange,
   useUpdateTransactionState,
 } from "@/src/features/transactions/hooks"
@@ -81,14 +81,21 @@ export default function TransactionsScreen() {
   const updateState = useUpdateTransactionState()
   const { data: accountsData } = useAccounts()
   const { data: categoriesData } = useCategories()
-  const [now] = useState(Date.now)
+  const [now, setNow] = useState(Date.now)
+
+  // Refresh the range when the screen regains focus so a month boundary is not missed.
+  useFocusEffect(
+    useCallback(() => {
+      setNow(Date.now())
+    }, [])
+  )
 
   const currentMonth = useMemo(() => monthRange(now), [now])
   const previousMonth = useMemo(
     () => monthRange(currentMonth.start - 1),
     [currentMonth.start]
   )
-  const { data: recentData } = useTransactions()
+  const { data: allData } = useAllTransactions()
   const { data: monthData } = useTransactionsInRange(currentMonth)
   const { data: previousData } = useTransactionsInRange(previousMonth)
 
@@ -96,16 +103,17 @@ export default function TransactionsScreen() {
     () => categoriesData ?? DEFAULT_CATEGORIES,
     [categoriesData]
   )
-  const highlights = useMemo(
-    () =>
-      computeHighlights({
-        currency: DEFAULT_CURRENCY,
-        current: monthData ?? [],
-        previous: previousData ?? [],
-        recent: recentData ?? [],
-      }),
-    [monthData, previousData, recentData]
-  )
+  const highlights = useMemo(() => {
+    const confirmed = (items: Transaction[]) =>
+      items.filter((item) => item.state === "confirmed")
+
+    return computeHighlights({
+      currency: DEFAULT_CURRENCY,
+      current: confirmed(monthData ?? []),
+      previous: confirmed(previousData ?? []),
+      recent: confirmed(allData ?? []),
+    })
+  }, [allData, monthData, previousData])
 
   const accounts = useMemo(() => accountsData ?? [], [accountsData])
   const { data: onboardingValue, isLoading: onboardingLoading } = useAppMeta(

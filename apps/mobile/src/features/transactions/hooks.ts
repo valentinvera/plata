@@ -32,6 +32,7 @@ import {
   createTransactions,
   deleteTransaction,
   getTransaction,
+  listAllTransactions,
   listTransactions,
   listTransactionsByState,
   listTransactionsFiltered,
@@ -47,6 +48,13 @@ export function useTransactions() {
   return useQuery({
     queryFn: () => listTransactions(),
     queryKey: transactionsQueryKey,
+  })
+}
+
+export function useAllTransactions() {
+  return useQuery({
+    queryFn: listAllTransactions,
+    queryKey: [...transactionsQueryKey, "all"],
   })
 }
 
