@@ -148,6 +148,12 @@ function useBatchActions() {
 
   const startSelecting = useCallback(() => setSelecting(true), [])
 
+  const resetSelection = useCallback(() => {
+    setSelected(new Set())
+    setConfirmingDelete(false)
+    setError(null)
+  }, [])
+
   const handleConfirm = useCallback(async () => {
     if (selected.size === 0) {
       return
@@ -186,6 +192,7 @@ function useBatchActions() {
     handleConfirm,
     handleDelete,
     isBusy: removeTransactions.isPending || updateStates.isPending,
+    resetSelection,
     selected,
     selecting,
     setConfirmingDelete,
@@ -306,7 +313,7 @@ function ResultsHeader({
       <Text className="text-muted text-sm">
         {`${count} result${count === 1 ? "" : "s"}`}
       </Text>
-      {count > 0 ? (
+      {count > 0 || batch.selecting ? (
         <Button
           onPress={batch.selecting ? batch.exitSelection : batch.startSelecting}
           variant="outline"
@@ -415,6 +422,12 @@ export default function SearchScreen() {
     router.push({ pathname: "/transaction/[id]", params: { id } })
   }, [])
 
+  // A filter change hides rows, so drop any selection made under the old scope.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rerun when the search scope changes
+  useEffect(() => {
+    batch.resetSelection()
+  }, [accountId, batch.resetSelection, categoryId, debouncedQuery, kind, state])
+
   return (
     <Container className="px-5">
       <Text className="pt-3 font-bold text-2xl text-foreground">Search</Text>
@@ -495,7 +508,12 @@ export default function SearchScreen() {
       {batch.selecting ? <SelectionBar batch={batch} /> : null}
 
       {batch.error ? (
-        <Text className="mt-3 text-destructive text-sm">{batch.error}</Text>
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-3 text-destructive text-sm"
+        >
+          {batch.error}
+        </Text>
       ) : null}
 
       {isLoading ? (
