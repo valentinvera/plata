@@ -70,7 +70,7 @@ export default function DuplicatesScreen() {
       ) : null}
 
       {groups.map((group) => (
-        <Card className="mt-3 p-4" key={group.key}>
+        <Card className="mt-3 p-4" key={group.transactions[0]?.id ?? group.key}>
           {group.transactions.map((transaction) => (
             <View className="mt-2" key={transaction.id}>
               <View className="flex-row items-center justify-between">
