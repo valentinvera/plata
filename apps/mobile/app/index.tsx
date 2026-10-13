@@ -74,12 +74,7 @@ function NavSection({
       <Text className="mb-2 text-muted text-sm">{title}</Text>
       <View className="flex-row flex-wrap gap-2">
         {actions.map((action) => (
-          <Button
-            key={action.label}
-            onPress={action.onPress}
-            size="sm"
-            variant="outline"
-          >
+          <Button key={action.label} onPress={action.onPress} variant="outline">
             <Button.Label>{action.label}</Button.Label>
           </Button>
         ))}
