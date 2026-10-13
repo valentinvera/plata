@@ -9,12 +9,14 @@ import {
   isSuggestionValid,
   splitCatchUpTexts,
 } from "@/src/features/transactions/catchup"
+import { suggestRecurringTransactions } from "@/src/features/transactions/catchup-recurring"
 import {
   DEFAULT_CATEGORIES,
   getCategoryById,
 } from "@/src/features/transactions/categories"
-import { formatAmount } from "@/src/features/transactions/format"
+import { formatAmount, formatDay } from "@/src/features/transactions/format"
 import {
+  useAllTransactions,
   useCategories,
   useCreateTransactions,
 } from "@/src/features/transactions/hooks"
@@ -31,6 +33,8 @@ export default function CatchUpScreen() {
   const [error, setError] = useState<string | null>(null)
   const createTransactions = useCreateTransactions()
   const { data: categoriesData } = useCategories()
+  const { data: allData } = useAllTransactions()
+  const [now] = useState(Date.now)
   const categories = categoriesData ?? DEFAULT_CATEGORIES
 
   const suggestions = useMemo(
@@ -41,6 +45,19 @@ export default function CatchUpScreen() {
   const valid = suggestions.filter(isSuggestionValid)
   const skipped = suggestions.length - valid.length
   const canSave = valid.length > 0 && !createTransactions.isPending
+
+  const recurringSuggestions = useMemo(
+    () =>
+      suggestRecurringTransactions(
+        (allData ?? []).filter(
+          (transaction) => transaction.state === "confirmed"
+        ),
+        now
+      ),
+    [allData, now]
+  )
+  const canAddRecurring =
+    recurringSuggestions.length > 0 && !createTransactions.isPending
 
   const handleSave = useCallback(
     async (state: TransactionState) => {
@@ -80,6 +97,36 @@ export default function CatchUpScreen() {
   const handleSuggested = useCallback(async () => {
     await handleSave("suggested")
   }, [handleSave])
+
+  const handleAddRecurring = useCallback(async () => {
+    if (recurringSuggestions.length === 0) {
+      return
+    }
+
+    setError(null)
+    try {
+      const inputs: NewTransaction[] = recurringSuggestions.map(
+        (suggestion) => ({
+          accountId: null,
+          amount: suggestion.amount,
+          categoryId: suggestion.categoryId,
+          confidence: null,
+          currency: suggestion.currency,
+          kind: "expense",
+          merchant: suggestion.merchant,
+          note: null,
+          occurredAt: suggestion.occurredAt,
+          rawRef: null,
+          source: "manual",
+          state: "confirmed",
+        })
+      )
+      await createTransactions.mutateAsync(inputs)
+      router.back()
+    } catch {
+      setError("Could not add the recurring transactions. Please try again.")
+    }
+  }, [createTransactions, recurringSuggestions])
 
   return (
     <Container className="px-5">
@@ -123,6 +170,37 @@ export default function CatchUpScreen() {
             </View>
           ))}
         </Card>
+      ) : null}
+
+      {recurringSuggestions.length > 0 ? (
+        <>
+          <Text className="mt-6 mb-2 text-muted text-sm">
+            Suggested from your recurring payments
+          </Text>
+          <Card className="p-4">
+            {recurringSuggestions.map((suggestion) => (
+              <View
+                className="mt-1 flex-row items-center justify-between"
+                key={suggestion.id}
+              >
+                <Text className="flex-1 text-foreground" numberOfLines={1}>
+                  {suggestion.merchant}
+                </Text>
+                <Text className="ml-3 text-muted text-sm">
+                  {formatAmount(suggestion.amount, suggestion.currency)} ·{" "}
+                  {formatDay(suggestion.occurredAt)}
+                </Text>
+              </View>
+            ))}
+          </Card>
+          <Button
+            className="mt-3"
+            isDisabled={!canAddRecurring}
+            onPress={handleAddRecurring}
+          >
+            <Button.Label>Add recurring transactions</Button.Label>
+          </Button>
+        </>
       ) : null}
 
       {error ? (
