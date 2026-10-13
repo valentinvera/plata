@@ -71,10 +71,13 @@ export default function RecurringScreen() {
           key={`${payment.merchant}|${payment.currency}`}
         >
           <View className="flex-row items-center justify-between">
-            <Text className="font-medium text-foreground">
+            <Text
+              className="flex-1 font-medium text-foreground"
+              numberOfLines={1}
+            >
               {payment.merchant || "No merchant"}
             </Text>
-            <Text className="text-foreground">
+            <Text className="ml-3 text-foreground">
               {formatAmount(payment.averageAmount, payment.currency)}
             </Text>
           </View>
