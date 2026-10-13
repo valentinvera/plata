@@ -1,4 +1,4 @@
-import { Redirect, router } from "expo-router"
+import { Redirect, router, useFocusEffect } from "expo-router"
 import { Button, Card, Chip, Spinner } from "heroui-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
@@ -16,20 +16,46 @@ import {
   getAccountName,
   NO_ACCOUNT,
 } from "@/src/features/transactions/accounts"
-import { getCategoryById } from "@/src/features/transactions/categories"
+import {
+  DEFAULT_CATEGORIES,
+  getCategoryById,
+} from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
+import { computeHighlights } from "@/src/features/transactions/highlights"
 import {
   useAccounts,
+  useAllTransactions,
   useAppMeta,
+  useCategories,
   useConfirmedTransactions,
   useSuggestedTransactions,
+  useTransactionsInRange,
   useUpdateTransactionState,
 } from "@/src/features/transactions/hooks"
 import {
   ONBOARDING_COMPLETED_KEY,
   shouldShowOnboarding,
 } from "@/src/features/transactions/onboarding"
+import { monthRange } from "@/src/features/transactions/periods"
 import type { Transaction } from "@/src/features/transactions/types"
+
+const DEFAULT_CURRENCY = "ARS"
+
+function changeLabel(ratio: number | null): string {
+  if (ratio === null) {
+    return ""
+  }
+
+  const percent = Math.round(ratio * 100)
+
+  if (percent === 0) {
+    return " · same as last month"
+  }
+
+  return percent > 0
+    ? ` · +${percent}% vs last month`
+    : ` · ${percent}% vs last month`
+}
 
 interface TransactionSection {
   data: Transaction[]
@@ -54,6 +80,40 @@ export default function TransactionsScreen() {
   } = useConfirmedTransactions(accountFilter)
   const updateState = useUpdateTransactionState()
   const { data: accountsData } = useAccounts()
+  const { data: categoriesData } = useCategories()
+  const [now, setNow] = useState(Date.now)
+
+  // Refresh the range when the screen regains focus so a month boundary is not missed.
+  useFocusEffect(
+    useCallback(() => {
+      setNow(Date.now())
+    }, [])
+  )
+
+  const currentMonth = useMemo(() => monthRange(now), [now])
+  const previousMonth = useMemo(
+    () => monthRange(currentMonth.start - 1),
+    [currentMonth.start]
+  )
+  const { data: allData } = useAllTransactions()
+  const { data: monthData } = useTransactionsInRange(currentMonth)
+  const { data: previousData } = useTransactionsInRange(previousMonth)
+
+  const allCategories = useMemo(
+    () => categoriesData ?? DEFAULT_CATEGORIES,
+    [categoriesData]
+  )
+  const highlights = useMemo(() => {
+    const confirmed = (items: Transaction[]) =>
+      items.filter((item) => item.state === "confirmed")
+
+    return computeHighlights({
+      currency: DEFAULT_CURRENCY,
+      current: confirmed(monthData ?? []),
+      previous: confirmed(previousData ?? []),
+      recent: confirmed(allData ?? []),
+    })
+  }, [allData, monthData, previousData])
 
   const accounts = useMemo(() => accountsData ?? [], [accountsData])
   const { data: onboardingValue, isLoading: onboardingLoading } = useAppMeta(
@@ -143,7 +203,7 @@ export default function TransactionsScreen() {
 
   const renderItem = useCallback(
     ({ item, section }: { item: Transaction; section: TransactionSection }) => {
-      const category = getCategoryById(item.categoryId).name
+      const category = getCategoryById(item.categoryId, allCategories).name
       const amount = formatAmount(item.amount, item.currency)
       const accountName = getAccountName(accounts, item.accountId)
       const meta = accountName
@@ -173,7 +233,7 @@ export default function TransactionsScreen() {
         </Card>
       )
     },
-    [accounts, handleConfirm, handleOpen]
+    [accounts, allCategories, handleConfirm, handleOpen]
   )
 
   const renderSectionHeader = useCallback(
@@ -191,6 +251,29 @@ export default function TransactionsScreen() {
     <View>
       <Text className="pt-3 font-bold text-2xl text-foreground">Plata</Text>
       <Text className="mt-1 text-muted text-sm">Your transactions</Text>
+
+      <Card className="mt-4 p-4">
+        <Text className="font-semibold text-foreground">This month</Text>
+        <Text className="mt-1 text-foreground">
+          {formatAmount(highlights.monthExpense, DEFAULT_CURRENCY)}
+          {changeLabel(highlights.monthExpenseChangeRatio)}
+        </Text>
+        {highlights.topCategory ? (
+          <Text className="mt-1 text-muted text-xs">
+            Top:{" "}
+            {
+              getCategoryById(highlights.topCategory.categoryId, allCategories)
+                .name
+            }{" "}
+            · {formatAmount(highlights.topCategory.amount, DEFAULT_CURRENCY)}
+          </Text>
+        ) : null}
+        <Text className="mt-1 text-muted text-xs">
+          {highlights.recurring} recurring · {highlights.duplicates} possible
+          duplicates
+        </Text>
+      </Card>
+
       <Button className="mt-4" onPress={handleAdd}>
         <Button.Label>Add transaction</Button.Label>
       </Button>
