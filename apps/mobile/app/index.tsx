@@ -186,6 +186,10 @@ export default function TransactionsScreen() {
     router.push("/export")
   }, [])
 
+  const handleDuplicates = useCallback(() => {
+    router.push("/duplicates")
+  }, [])
+
   const handleNotifications = useCallback(() => {
     router.push("/notifications")
   }, [])
@@ -306,6 +310,9 @@ export default function TransactionsScreen() {
           <Button.Label>Export</Button.Label>
         </Button>
       )}
+      <Button className="mt-2" onPress={handleDuplicates} variant="outline">
+        <Button.Label>Duplicates</Button.Label>
+      </Button>
       {Platform.OS === "android" ? (
         <Button
           className="mt-2"
