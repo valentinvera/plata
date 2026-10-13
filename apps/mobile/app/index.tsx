@@ -2,6 +2,7 @@ import { Redirect, router, useFocusEffect } from "expo-router"
 import { Button, Card, Chip, Spinner } from "heroui-native"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import {
+  AppState,
   Platform,
   Pressable,
   ScrollView,
@@ -115,6 +116,17 @@ export default function TransactionsScreen() {
       setNow(Date.now())
     }, [])
   )
+
+  // ...and when the app is resumed without a navigation change.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (status) => {
+      if (status === "active") {
+        setNow(Date.now())
+      }
+    })
+
+    return () => subscription.remove()
+  }, [])
 
   const currentMonth = useMemo(() => monthRange(now), [now])
   const previousMonth = useMemo(

@@ -1,7 +1,7 @@
 import { useFocusEffect } from "expo-router"
 import { Button, Card, Spinner } from "heroui-native"
-import { useCallback, useMemo, useState } from "react"
-import { Text, View } from "react-native"
+import { useCallback, useEffect, useMemo, useState } from "react"
+import { AppState, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
 import {
@@ -88,6 +88,17 @@ export default function InsightsScreen() {
     }, [])
   )
 
+  // ...and when the app is resumed without a navigation change.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (status) => {
+      if (status === "active") {
+        setNow(Date.now())
+      }
+    })
+
+    return () => subscription.remove()
+  }, [])
+
   const confirmedCurrent = useMemo(
     () => (current.data ?? []).filter((item) => item.state === "confirmed"),
     [current.data]
@@ -98,7 +109,11 @@ export default function InsightsScreen() {
   )
 
   const comparisons = useMemo(
-    () => comparePeriods(confirmedCurrent, confirmedPrevious),
+    () =>
+      comparePeriods(confirmedCurrent, confirmedPrevious).filter(
+        (comparison) =>
+          comparison.currentExpense > 0 || comparison.previousExpense > 0
+      ),
     [confirmedCurrent, confirmedPrevious]
   )
 
