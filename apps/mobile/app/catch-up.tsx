@@ -107,7 +107,7 @@ export default function CatchUpScreen() {
     try {
       const inputs: NewTransaction[] = recurringSuggestions.map(
         (suggestion) => ({
-          accountId: null,
+          accountId: suggestion.accountId,
           amount: suggestion.amount,
           categoryId: suggestion.categoryId,
           confidence: null,

@@ -37,6 +37,7 @@ describe("detectRecurring", () => {
 
     expect(detectRecurring(transactions)).toEqual([
       {
+        accountId: null,
         averageAmount: 5000,
         cadence: "monthly",
         categoryId: "services",
