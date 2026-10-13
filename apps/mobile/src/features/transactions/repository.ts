@@ -232,6 +232,25 @@ export async function updateTransactionState(
   )
 }
 
+export async function updateTransactionsState(
+  ids: readonly string[],
+  state: TransactionState
+): Promise<void> {
+  if (ids.length === 0) {
+    return
+  }
+
+  const database = await getDatabase()
+  const placeholders = ids.map(() => "?").join(", ")
+
+  await database.runAsync(
+    `UPDATE transactions SET state = ?, updated_at = ?, synced_at = NULL WHERE id IN (${placeholders})`,
+    state,
+    Date.now(),
+    ...ids
+  )
+}
+
 export async function updateTransaction(
   id: string,
   update: TransactionUpdate
@@ -273,5 +292,24 @@ export async function deleteTransaction(id: string): Promise<void> {
     now,
     now,
     id
+  )
+}
+
+export async function deleteTransactions(
+  ids: readonly string[]
+): Promise<void> {
+  if (ids.length === 0) {
+    return
+  }
+
+  const database = await getDatabase()
+  const now = Date.now()
+  const placeholders = ids.map(() => "?").join(", ")
+
+  await database.runAsync(
+    `UPDATE transactions SET deleted_at = ?, updated_at = ?, synced_at = NULL WHERE id IN (${placeholders})`,
+    now,
+    now,
+    ...ids
   )
 }

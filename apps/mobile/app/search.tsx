@@ -19,6 +19,7 @@ import { Pressable, ScrollView, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
 import {
+  type Account,
   ALL_ACCOUNTS,
   getAccountName,
   NO_ACCOUNT,
@@ -29,9 +30,13 @@ import { formatAmount } from "@/src/features/transactions/format"
 import {
   useAccounts,
   useCategories,
+  useDeleteTransactions,
   useFilteredTransactions,
+  useUpdateTransactionsState,
 } from "@/src/features/transactions/hooks"
 import type {
+  Category,
+  Transaction,
   TransactionKind,
   TransactionState,
 } from "@/src/features/transactions/types"
@@ -112,6 +117,270 @@ function FilterRow({
   )
 }
 
+function useBatchActions() {
+  const [selecting, setSelecting] = useState(false)
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set())
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const removeTransactions = useDeleteTransactions()
+  const updateStates = useUpdateTransactionsState()
+
+  const toggleSelected = useCallback((id: string) => {
+    setSelected((current) => {
+      const next = new Set(current)
+
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+
+      return next
+    })
+  }, [])
+
+  const exitSelection = useCallback(() => {
+    setSelecting(false)
+    setSelected(new Set())
+    setConfirmingDelete(false)
+    setError(null)
+  }, [])
+
+  const startSelecting = useCallback(() => setSelecting(true), [])
+
+  const resetSelection = useCallback(() => {
+    setSelected(new Set())
+    setConfirmingDelete(false)
+    setError(null)
+  }, [])
+
+  const handleConfirm = useCallback(async () => {
+    if (selected.size === 0) {
+      return
+    }
+
+    setError(null)
+    try {
+      await updateStates.mutateAsync({
+        ids: [...selected],
+        state: "confirmed",
+      })
+      exitSelection()
+    } catch {
+      setError("Could not update the selected transactions.")
+    }
+  }, [exitSelection, selected, updateStates])
+
+  const handleDelete = useCallback(async () => {
+    if (selected.size === 0) {
+      return
+    }
+
+    setError(null)
+    try {
+      await removeTransactions.mutateAsync([...selected])
+      exitSelection()
+    } catch {
+      setError("Could not delete the selected transactions.")
+    }
+  }, [exitSelection, removeTransactions, selected])
+
+  return {
+    confirmingDelete,
+    error,
+    exitSelection,
+    handleConfirm,
+    handleDelete,
+    isBusy: removeTransactions.isPending || updateStates.isPending,
+    resetSelection,
+    selected,
+    selecting,
+    setConfirmingDelete,
+    startSelecting,
+    toggleSelected,
+  }
+}
+
+function SearchResultCard({
+  accounts,
+  categories,
+  onOpen,
+  onToggle,
+  selected,
+  selecting,
+  transaction,
+}: {
+  accounts: readonly Account[]
+  categories: readonly Category[]
+  onOpen: (id: string) => void
+  onToggle: (id: string) => void
+  selected: ReadonlySet<string>
+  selecting: boolean
+  transaction: Transaction
+}) {
+  const isSelected = selecting && selected.has(transaction.id)
+  const meta = [
+    getAccountName(accounts, transaction.accountId),
+    getCategoryById(transaction.categoryId, categories).name,
+    transaction.state === "suggested" ? "To confirm" : null,
+  ]
+    .filter((part) => part !== null)
+    .join(" · ")
+
+  return (
+    <Card className="mt-3 p-4">
+      <Pressable
+        accessibilityRole={selecting ? "checkbox" : "button"}
+        accessibilityState={selecting ? { checked: isSelected } : undefined}
+        onPress={() =>
+          selecting ? onToggle(transaction.id) : onOpen(transaction.id)
+        }
+      >
+        <View className="flex-row items-center justify-between">
+          <Text
+            className="flex-1 font-medium text-foreground"
+            numberOfLines={1}
+          >
+            {isSelected ? "✓ " : ""}
+            {transaction.merchant ?? "No merchant"}
+          </Text>
+          <Text className="ml-3 text-foreground">
+            {formatAmount(transaction.amount, transaction.currency)}
+          </Text>
+        </View>
+        <Text className="mt-1 text-muted text-xs">{meta}</Text>
+      </Pressable>
+    </Card>
+  )
+}
+
+function SelectionBar({
+  batch,
+}: {
+  batch: ReturnType<typeof useBatchActions>
+}) {
+  return (
+    <View className="mt-3 gap-2">
+      <Text className="text-muted text-sm">{batch.selected.size} selected</Text>
+      <View className="flex-row flex-wrap gap-2">
+        <Button
+          isDisabled={batch.selected.size === 0 || batch.isBusy}
+          onPress={batch.handleConfirm}
+          variant="outline"
+        >
+          <Button.Label>Confirm</Button.Label>
+        </Button>
+        {batch.confirmingDelete ? (
+          <Button
+            isDisabled={batch.isBusy}
+            onPress={batch.handleDelete}
+            variant="outline"
+          >
+            <Button.Label>Yes, delete</Button.Label>
+          </Button>
+        ) : (
+          <Button
+            isDisabled={batch.selected.size === 0 || batch.isBusy}
+            onPress={() => batch.setConfirmingDelete(true)}
+            variant="outline"
+          >
+            <Button.Label>Delete</Button.Label>
+          </Button>
+        )}
+        {batch.confirmingDelete ? (
+          <Button
+            isDisabled={batch.isBusy}
+            onPress={() => batch.setConfirmingDelete(false)}
+            variant="outline"
+          >
+            <Button.Label>Cancel</Button.Label>
+          </Button>
+        ) : null}
+      </View>
+    </View>
+  )
+}
+
+function ResultsHeader({
+  batch,
+  count,
+}: {
+  batch: ReturnType<typeof useBatchActions>
+  count: number
+}) {
+  return (
+    <View className="mt-4 flex-row items-center justify-between">
+      <Text className="text-muted text-sm">
+        {`${count} result${count === 1 ? "" : "s"}`}
+      </Text>
+      {count > 0 || batch.selecting ? (
+        <Button
+          onPress={batch.selecting ? batch.exitSelection : batch.startSelecting}
+          variant="outline"
+        >
+          <Button.Label>{batch.selecting ? "Done" : "Select"}</Button.Label>
+        </Button>
+      ) : null}
+    </View>
+  )
+}
+
+function SearchResults({
+  accounts,
+  batch,
+  categories,
+  hasNextPage,
+  isFetchingNextPage,
+  onFetchMore,
+  onOpen,
+  transactions,
+}: {
+  accounts: readonly Account[]
+  batch: ReturnType<typeof useBatchActions>
+  categories: readonly Category[]
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  onFetchMore: () => void
+  onOpen: (id: string) => void
+  transactions: readonly Transaction[]
+}) {
+  return (
+    <>
+      {transactions.length === 0 ? (
+        <Text className="mt-4 text-muted text-sm">
+          No matching transactions.
+        </Text>
+      ) : null}
+
+      {transactions.map((transaction) => (
+        <SearchResultCard
+          accounts={accounts}
+          categories={categories}
+          key={transaction.id}
+          onOpen={onOpen}
+          onToggle={batch.toggleSelected}
+          selected={batch.selected}
+          selecting={batch.selecting}
+          transaction={transaction}
+        />
+      ))}
+
+      {hasNextPage ? (
+        <Button
+          className="mt-4"
+          isDisabled={isFetchingNextPage}
+          onPress={onFetchMore}
+          variant="outline"
+        >
+          <Button.Label>
+            {isFetchingNextPage ? "Loading…" : "Load more"}
+          </Button.Label>
+        </Button>
+      ) : null}
+    </>
+  )
+}
+
 export default function SearchScreen() {
   const [query, setQuery] = useState("")
   const [accountId, setAccountId] = useState(ALL_ACCOUNTS)
@@ -124,6 +393,7 @@ export default function SearchScreen() {
   const { data: categoriesData } = useCategories()
   const accounts = accountsData ?? []
   const categories = categoriesData ?? []
+  const batch = useBatchActions()
 
   const filter: TransactionFilter = useMemo(
     () => ({
@@ -151,6 +421,12 @@ export default function SearchScreen() {
   const handleOpen = useCallback((id: string) => {
     router.push({ pathname: "/transaction/[id]", params: { id } })
   }, [])
+
+  // A filter change hides rows, so drop any selection made under the old scope.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rerun when the search scope changes
+  useEffect(() => {
+    batch.resetSelection()
+  }, [accountId, batch.resetSelection, categoryId, debouncedQuery, kind, state])
 
   return (
     <Container className="px-5">
@@ -225,6 +501,21 @@ export default function SearchScreen() {
         ))}
       </FilterRow>
 
+      {showResults ? (
+        <ResultsHeader batch={batch} count={transactions.length} />
+      ) : null}
+
+      {batch.selecting ? <SelectionBar batch={batch} /> : null}
+
+      {batch.error ? (
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-3 text-destructive text-sm"
+        >
+          {batch.error}
+        </Text>
+      ) : null}
+
       {isLoading ? (
         <View className="items-center py-6">
           <Spinner />
@@ -242,54 +533,17 @@ export default function SearchScreen() {
         </Card>
       ) : null}
 
-      {showResults && transactions.length === 0 ? (
-        <Text className="mt-4 text-muted text-sm">
-          No matching transactions.
-        </Text>
-      ) : null}
-
-      {showResults
-        ? transactions.map((transaction) => {
-            const meta = [
-              getAccountName(accounts, transaction.accountId),
-              getCategoryById(transaction.categoryId, categories).name,
-              transaction.state === "suggested" ? "To confirm" : null,
-            ]
-              .filter((part) => part !== null)
-              .join(" · ")
-
-            return (
-              <Card className="mt-3 p-4" key={transaction.id}>
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => handleOpen(transaction.id)}
-                >
-                  <View className="flex-row items-center justify-between">
-                    <Text className="font-medium text-foreground">
-                      {transaction.merchant ?? "No merchant"}
-                    </Text>
-                    <Text className="text-foreground">
-                      {formatAmount(transaction.amount, transaction.currency)}
-                    </Text>
-                  </View>
-                  <Text className="mt-1 text-muted text-xs">{meta}</Text>
-                </Pressable>
-              </Card>
-            )
-          })
-        : null}
-
-      {showResults && hasNextPage ? (
-        <Button
-          className="mt-4"
-          isDisabled={isFetchingNextPage}
-          onPress={() => fetchNextPage()}
-          variant="outline"
-        >
-          <Button.Label>
-            {isFetchingNextPage ? "Loading…" : "Load more"}
-          </Button.Label>
-        </Button>
+      {showResults ? (
+        <SearchResults
+          accounts={accounts}
+          batch={batch}
+          categories={categories}
+          hasNextPage={hasNextPage}
+          isFetchingNextPage={isFetchingNextPage}
+          onFetchMore={() => fetchNextPage()}
+          onOpen={handleOpen}
+          transactions={transactions}
+        />
       ) : null}
     </Container>
   )
