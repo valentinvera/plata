@@ -31,6 +31,7 @@ import {
   createTransaction,
   createTransactions,
   deleteTransaction,
+  deleteTransactions,
   getTransaction,
   listAllTransactions,
   listTransactions,
@@ -39,6 +40,7 @@ import {
   listTransactionsInRange,
   updateTransaction,
   updateTransactionState,
+  updateTransactionsState,
 } from "./repository"
 import type { NewTransaction, Transaction, TransactionState } from "./types"
 
@@ -151,6 +153,27 @@ export function useDeleteTransaction() {
 
   return useMutation({
     mutationFn: (id: string) => deleteTransaction(id),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
+  })
+}
+
+export function useDeleteTransactions() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (ids: string[]) => deleteTransactions(ids),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
+  })
+}
+
+export function useUpdateTransactionsState() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (input: { ids: string[]; state: TransactionState }) =>
+      updateTransactionsState(input.ids, input.state),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
   })
