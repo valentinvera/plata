@@ -4,7 +4,7 @@ import { router, Stack } from "expo-router"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
 import { HeroUINativeProvider } from "heroui-native"
 import { useEffect } from "react"
-import { AppState, Platform } from "react-native"
+import { Alert, AppState, Platform } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
@@ -100,19 +100,27 @@ function ShareIntentHandler() {
     let cancelled = false
 
     const importImage = async () => {
-      let text = ""
+      let text: string | null = null
 
       try {
-        text = (await recognizeTransactionText(sharedImage)) ?? ""
+        text = await recognizeTransactionText(sharedImage)
       } catch {
-        text = ""
+        text = null
       }
 
       if (cancelled) {
         return
       }
 
-      router.push({ pathname: "/add-transaction", params: { text } })
+      if (text) {
+        router.push({ pathname: "/add-transaction", params: { text } })
+      } else {
+        Alert.alert(
+          "Could not read the image",
+          "We could not find a transaction in that screenshot. Try a clearer image or add it manually."
+        )
+      }
+
       resetShareIntent()
     }
 
