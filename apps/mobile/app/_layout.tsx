@@ -12,11 +12,15 @@ import { AppThemeProvider } from "@/contexts/app-theme-context"
 import { useSyncOnForeground } from "@/src/features/sync/hooks"
 import { useAppMeta } from "@/src/features/transactions/hooks"
 import { registerNotificationListener } from "@/src/features/transactions/notification-listener"
+import { recognizeTransactionText } from "@/src/features/transactions/ocr-recognize"
 import {
   ONBOARDING_COMPLETED_KEY,
   shouldShowOnboarding,
 } from "@/src/features/transactions/onboarding"
-import { getSharedText } from "@/src/features/transactions/share"
+import {
+  getSharedImageUrl,
+  getSharedText,
+} from "@/src/features/transactions/share"
 import { queryClient } from "@/utils/trpc"
 
 // Register early so the headless task is available even when the app is closed.
@@ -62,12 +66,13 @@ function ShareIntentHandler() {
   const { hasShareIntent, resetShareIntent, shareIntent } =
     useShareIntentContext()
   const sharedText = getSharedText(shareIntent)
+  const sharedImage = getSharedImageUrl(shareIntent)
   const { data: onboardingValue, isLoading } = useAppMeta(
     ONBOARDING_COMPLETED_KEY
   )
 
   useEffect(() => {
-    if (!(hasShareIntent && sharedText) || isLoading) {
+    if (!hasShareIntent || isLoading) {
       return
     }
 
@@ -78,12 +83,52 @@ function ShareIntentHandler() {
       return
     }
 
-    router.push({
-      pathname: "/add-transaction",
-      params: { text: sharedText },
-    })
-    resetShareIntent()
-  }, [hasShareIntent, isLoading, onboardingValue, resetShareIntent, sharedText])
+    if (sharedText) {
+      router.push({
+        pathname: "/add-transaction",
+        params: { text: sharedText },
+      })
+      resetShareIntent()
+      return
+    }
+
+    if (!sharedImage) {
+      return
+    }
+
+    // iOS screenshots arrive as images: OCR them before opening the form.
+    let cancelled = false
+
+    const importImage = async () => {
+      let text = ""
+
+      try {
+        text = (await recognizeTransactionText(sharedImage)) ?? ""
+      } catch {
+        text = ""
+      }
+
+      if (cancelled) {
+        return
+      }
+
+      router.push({ pathname: "/add-transaction", params: { text } })
+      resetShareIntent()
+    }
+
+    importImage().catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    hasShareIntent,
+    isLoading,
+    onboardingValue,
+    resetShareIntent,
+    sharedImage,
+    sharedText,
+  ])
 
   return null
 }
