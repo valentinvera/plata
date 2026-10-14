@@ -73,5 +73,8 @@ export function selectTransactionText(ocrText: string): string | null {
     return best.text
   }
 
-  return lines[0] ?? null
+  // Nothing that reads like a payment or carries an amount means the screenshot
+  // is not a transaction (a random screen, a gallery photo, ...). Returning its
+  // first line would prefill the form with noise such as the status-bar clock.
+  return null
 }
