@@ -9,30 +9,24 @@ export interface ReminderPlan {
   title: string
 }
 
-export function daysSince(lastAt: number | null, now: number): number | null {
-  if (lastAt === null || lastAt <= 0) {
-    return null
-  }
-
-  return Math.floor((now - lastAt) / DAY_MS)
-}
-
-// Gentle, opt-in nudge: only after the user has been away for a few days, and
-// never before their first entry (we don't nag people who have not started).
+// The first evening the user becomes eligible for a nudge. It is computed in
+// advance from the last time something was logged, so the reminder still fires
+// even if the app is never reopened before the threshold elapses.
 export function planReminder(
-  lastAt: number | null,
+  lastLoggedAt: number | null,
   now: number,
   thresholdDays = REMINDER_THRESHOLD_DAYS
 ): ReminderPlan | null {
-  const days = daysSince(lastAt, now)
-
-  if (days === null || days < thresholdDays) {
+  if (lastLoggedAt === null || lastLoggedAt <= 0) {
+    // Never nag people who have not logged anything yet.
     return null
   }
 
+  const eligibleAt = lastLoggedAt + thresholdDays * DAY_MS
+
   return {
     body: "Cuando puedas, sumá lo que gastaste. Sin apuro ni culpa.",
-    dueAt: nextReminderTime(now),
+    dueAt: nextReminderTime(Math.max(now, eligibleAt)),
     title: "¿Te ponés al día?",
   }
 }

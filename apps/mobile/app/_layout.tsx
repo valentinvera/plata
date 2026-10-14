@@ -17,7 +17,7 @@ import { useSyncOnForeground } from "@/src/features/sync/hooks"
 import {
   transactionsQueryKey,
   useAppMeta,
-  useLastTransactionTime,
+  useLastLoggedTime,
   usePreferences,
 } from "@/src/features/transactions/hooks"
 import { drainCapturedNotifications } from "@/src/features/transactions/notification-listener"
@@ -74,19 +74,19 @@ function StackLayout() {
 
 function ReminderScheduler() {
   const { data: preferences } = usePreferences()
-  const { data: lastAt } = useLastTransactionTime()
+  const { data: lastLoggedAt } = useLastLoggedTime()
   const enabled = preferences?.remindersEnabled ?? false
-  const ready = preferences !== undefined && lastAt !== undefined
+  const ready = preferences !== undefined && lastLoggedAt !== undefined
 
-  // Keep a single "get up to date" reminder in sync with how long ago the last
-  // transaction was (opt-in).
+  // Keep a single "get up to date" reminder in sync with when the user last
+  // logged something (opt-in).
   useEffect(() => {
     if (!ready) {
       return
     }
 
     const run = () => {
-      const task = enabled ? syncReminder(lastAt) : cancelReminders()
+      const task = enabled ? syncReminder(lastLoggedAt) : cancelReminders()
       task.catch(() => undefined)
     }
 
@@ -99,7 +99,7 @@ function ReminderScheduler() {
     })
 
     return () => subscription.remove()
-  }, [enabled, lastAt, ready])
+  }, [enabled, lastLoggedAt, ready])
 
   return null
 }

@@ -32,7 +32,7 @@ import {
   createTransactions,
   deleteTransaction,
   deleteTransactions,
-  getLastTransactionTime,
+  getLastLoggedTime,
   getTransaction,
   listAllTransactions,
   listTransactions,
@@ -61,9 +61,9 @@ export function useAllTransactions() {
   })
 }
 
-export function useLastTransactionTime() {
+export function useLastLoggedTime() {
   return useQuery({
-    queryFn: getLastTransactionTime,
+    queryFn: getLastLoggedTime,
     queryKey: [...transactionsQueryKey, "last"],
   })
 }

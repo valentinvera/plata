@@ -20,6 +20,11 @@ setNotificationHandler({
     }),
 })
 
+// Bumped on every sync/opt-out. A sync that gets superseded while awaiting a
+// permission or native call must not schedule after the fact, otherwise a stale
+// sync could resurrect a reminder the user just turned off.
+let generation = 0
+
 export async function requestReminderPermission(): Promise<boolean> {
   if (Platform.OS === "web") {
     return false
@@ -37,6 +42,8 @@ export async function requestReminderPermission(): Promise<boolean> {
 }
 
 export async function cancelReminders(): Promise<void> {
+  generation += 1
+
   if (Platform.OS === "web") {
     return
   }
@@ -44,26 +51,33 @@ export async function cancelReminders(): Promise<void> {
   await cancelAllScheduledNotificationsAsync()
 }
 
-// Schedules (or clears) the single "get up to date" reminder for the next
-// occurrence of the reminder hour, based on how long ago the last transaction
-// was. Returns whether a reminder is now scheduled.
+// Schedules (or clears) the single "get up to date" reminder for the first
+// evening the user is eligible, based on when they last logged something.
+// Returns whether a reminder is now scheduled.
 export async function syncReminder(
-  lastAt: number | null,
+  lastLoggedAt: number | null,
   now: number = Date.now()
 ): Promise<boolean> {
   if (Platform.OS === "web") {
     return false
   }
 
-  await cancelReminders()
+  generation += 1
+  const mine = generation
 
-  const plan = planReminder(lastAt, now)
+  await cancelAllScheduledNotificationsAsync()
+
+  const plan = planReminder(lastLoggedAt, now)
 
   if (!plan) {
     return false
   }
 
   if (!(await requestReminderPermission())) {
+    return false
+  }
+
+  if (mine !== generation) {
     return false
   }
 
