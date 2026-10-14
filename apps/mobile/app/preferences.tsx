@@ -262,7 +262,12 @@ export default function PreferencesScreen() {
         A gentle nudge if you have not logged anything for a few days.
       </Text>
       {remindersError ? (
-        <Text className="mt-2 text-destructive text-sm">{remindersError}</Text>
+        <Text
+          accessibilityLiveRegion="polite"
+          className="mt-2 text-destructive text-sm"
+        >
+          {remindersError}
+        </Text>
       ) : null}
 
       <Text className="mt-6 mb-2 text-muted text-sm">Privacy</Text>
