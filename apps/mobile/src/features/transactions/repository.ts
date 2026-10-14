@@ -155,6 +155,15 @@ export async function listAllTransactions(): Promise<Transaction[]> {
   return rows.map(rowToTransaction)
 }
 
+export async function getLastLoggedTime(): Promise<number | null> {
+  const database = await getDatabase()
+  const row = await database.getFirstAsync<{ created_at: number | null }>(
+    "SELECT MAX(created_at) AS created_at FROM transactions WHERE deleted_at IS NULL"
+  )
+
+  return row?.created_at ?? null
+}
+
 export async function listTransactionsInRange(
   start: number,
   end: number
