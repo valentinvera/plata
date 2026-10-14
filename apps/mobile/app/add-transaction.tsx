@@ -112,7 +112,7 @@ export default function AddTransactionScreen() {
       if (recognized) {
         setText(recognized)
       } else {
-        setError("We could not read any text from that image.")
+        setError("We could not find a transaction in that image.")
       }
     } catch {
       setError("We could not read that image. Please try again.")

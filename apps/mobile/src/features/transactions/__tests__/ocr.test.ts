@@ -22,8 +22,21 @@ describe("selectTransactionText", () => {
     expect(selectTransactionText(ocr)).toBe("Compraste en CARREFOUR $12.345,67")
   })
 
-  it("falls back to the first line when nothing looks like a payment", () => {
-    expect(selectTransactionText("\n  Hola  \n  mundo  \n")).toBe("Hola")
+  it("returns null when nothing looks like a payment", () => {
+    expect(selectTransactionText("\n  Hola  \n  mundo  \n")).toBeNull()
+  })
+
+  it("returns null for a screenshot that is not a transaction", () => {
+    const ocr = [
+      "2:59",
+      "Wed, Oct 14",
+      "Gmail",
+      "Photos",
+      "YouTube",
+      "Serial console enabled",
+    ].join("\n")
+
+    expect(selectTransactionText(ocr)).toBeNull()
   })
 
   it("returns null for blank text", () => {
