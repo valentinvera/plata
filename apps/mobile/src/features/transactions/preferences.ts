@@ -8,6 +8,7 @@ export interface Preferences {
   defaultAccountId: string | null
   paymentMix: PaymentMix
   privacyMode: PrivacyMode
+  remindersEnabled: boolean
 }
 
 export const ACCOUNT_KIND_ORDER: readonly AccountKind[] = [
@@ -22,6 +23,7 @@ export const DEFAULT_PREFERENCES: Preferences = {
   defaultAccountId: null,
   paymentMix: EMPTY_PAYMENT_MIX,
   privacyMode: "local_only",
+  remindersEnabled: false,
 }
 
 const PRIVACY_MODES: readonly PrivacyMode[] = ["local_only", "sync"]
@@ -73,6 +75,7 @@ export function parsePreferences(raw: string | null): Preferences {
       privacyMode: isPrivacyMode(record.privacyMode)
         ? record.privacyMode
         : "local_only",
+      remindersEnabled: record.remindersEnabled === true,
     }
   } catch {
     return DEFAULT_PREFERENCES

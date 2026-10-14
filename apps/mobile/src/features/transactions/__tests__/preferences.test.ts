@@ -30,6 +30,7 @@ describe("parsePreferences", () => {
       defaultAccountId: "card",
       paymentMix: { card: 3, cash: 1, transfer: 0 },
       privacyMode: "sync",
+      remindersEnabled: true,
     }
 
     expect(parsePreferences(serializePreferences(preferences))).toEqual(
