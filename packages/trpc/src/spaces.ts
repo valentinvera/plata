@@ -33,7 +33,9 @@ export const redeemInviteInput = z.object({
 
 export const spaceIdInput = z.object({ spaceId })
 
-export const spacePushInput = pushInput.extend({ spaceId })
+// safeExtend keeps the aggregate size refinement on `pushInput`; a plain
+// extend is not the documented form once a schema carries checks.
+export const spacePushInput = pushInput.safeExtend({ spaceId })
 
 export const spacePullInput = z.object({
   since: z.string().min(1).nullish(),

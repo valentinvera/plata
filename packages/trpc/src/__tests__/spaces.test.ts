@@ -123,6 +123,19 @@ describe("spacePushInput", () => {
 
     expect(result.success).toBe(false)
   })
+
+  it("keeps the aggregate size refinement from the sync schema", () => {
+    const big = "A".repeat(60_000)
+    const result = spacePushInput.safeParse({
+      blobs: Array.from({ length: 100 }, (_, index) =>
+        blob({ ciphertext: big, id: `tx-${index}` })
+      ),
+      deviceId: "device-1",
+      spaceId: "space-1",
+    })
+
+    expect(result.success).toBe(false)
+  })
 })
 
 describe("spacePullInput", () => {
