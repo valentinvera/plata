@@ -1,5 +1,9 @@
 import "@/styles/globals.css"
-import { focusManager, QueryClientProvider } from "@tanstack/react-query"
+import {
+  focusManager,
+  QueryClientProvider,
+  useQueryClient,
+} from "@tanstack/react-query"
 import { router, Stack } from "expo-router"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
 import { HeroUINativeProvider } from "heroui-native"
@@ -10,7 +14,11 @@ import { KeyboardProvider } from "react-native-keyboard-controller"
 
 import { AppThemeProvider } from "@/contexts/app-theme-context"
 import { useSyncOnForeground } from "@/src/features/sync/hooks"
-import { useAppMeta } from "@/src/features/transactions/hooks"
+import {
+  transactionsQueryKey,
+  useAppMeta,
+} from "@/src/features/transactions/hooks"
+import { drainCapturedNotifications } from "@/src/features/transactions/notification-listener"
 import { recognizeTransactionText } from "@/src/features/transactions/ocr-recognize"
 import {
   ONBOARDING_COMPLETED_KEY,
@@ -21,9 +29,6 @@ import {
   getSharedText,
 } from "@/src/features/transactions/share"
 import { queryClient } from "@/utils/trpc"
-
-// Register early so the headless task is available even when the app is closed.
-// (Done in the bundle entry `index.js`, which also runs in the headless context.)
 
 function StackLayout() {
   return (
@@ -145,6 +150,47 @@ function SyncHandler() {
   return null
 }
 
+function NotificationDrain() {
+  const client = useQueryClient()
+
+  // Turn notifications captured in the background into suggestions when the app
+  // is (re)opened.
+  useEffect(() => {
+    if (Platform.OS !== "android") {
+      return
+    }
+
+    let cancelled = false
+
+    const drain = () => {
+      drainCapturedNotifications()
+        .then((count) => {
+          if (!(cancelled || count === 0)) {
+            return client.invalidateQueries({
+              queryKey: transactionsQueryKey,
+            })
+          }
+        })
+        .catch(() => undefined)
+    }
+
+    drain()
+
+    const subscription = AppState.addEventListener("change", (status) => {
+      if (status === "active") {
+        drain()
+      }
+    })
+
+    return () => {
+      cancelled = true
+      subscription.remove()
+    }
+  }, [client])
+
+  return null
+}
+
 export default function Layout() {
   // Background ingestion writes straight to SQLite, so refetch the cached
   // queries when the app returns to the foreground.
@@ -169,6 +215,7 @@ export default function Layout() {
               <HeroUINativeProvider>
                 <StackLayout />
                 <SyncHandler />
+                <NotificationDrain />
                 <ShareIntentHandler />
               </HeroUINativeProvider>
             </AppThemeProvider>

@@ -2,7 +2,7 @@
   "expo": {
     "name": "plata",
     "slug": "plata",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "plata",
@@ -72,8 +72,7 @@
           "photosPermission": "Plata reads the screenshot you pick to import the transaction."
         }
       ],
-      "expo-sharing",
-      "./plugins/with-notification-listener-fix"
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
