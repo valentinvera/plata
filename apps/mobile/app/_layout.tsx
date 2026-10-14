@@ -17,6 +17,8 @@ import { useSyncOnForeground } from "@/src/features/sync/hooks"
 import {
   transactionsQueryKey,
   useAppMeta,
+  useLastTransactionTime,
+  usePreferences,
 } from "@/src/features/transactions/hooks"
 import { drainCapturedNotifications } from "@/src/features/transactions/notification-listener"
 import { recognizeTransactionText } from "@/src/features/transactions/ocr-recognize"
@@ -24,6 +26,10 @@ import {
   ONBOARDING_COMPLETED_KEY,
   shouldShowOnboarding,
 } from "@/src/features/transactions/onboarding"
+import {
+  cancelReminders,
+  syncReminder,
+} from "@/src/features/transactions/reminder-scheduler"
 import {
   getSharedImageUrl,
   getSharedText,
@@ -64,6 +70,38 @@ function StackLayout() {
       />
     </Stack>
   )
+}
+
+function ReminderScheduler() {
+  const { data: preferences } = usePreferences()
+  const { data: lastAt } = useLastTransactionTime()
+  const enabled = preferences?.remindersEnabled ?? false
+  const ready = preferences !== undefined && lastAt !== undefined
+
+  // Keep a single "get up to date" reminder in sync with how long ago the last
+  // transaction was (opt-in).
+  useEffect(() => {
+    if (!ready) {
+      return
+    }
+
+    const run = () => {
+      const task = enabled ? syncReminder(lastAt) : cancelReminders()
+      task.catch(() => undefined)
+    }
+
+    run()
+
+    const subscription = AppState.addEventListener("change", (status) => {
+      if (status === "active") {
+        run()
+      }
+    })
+
+    return () => subscription.remove()
+  }, [enabled, lastAt, ready])
+
+  return null
 }
 
 function ShareIntentHandler() {
@@ -216,6 +254,7 @@ export default function Layout() {
                 <StackLayout />
                 <SyncHandler />
                 <NotificationDrain />
+                <ReminderScheduler />
                 <ShareIntentHandler />
               </HeroUINativeProvider>
             </AppThemeProvider>

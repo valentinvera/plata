@@ -18,6 +18,10 @@ import {
   useSetPreferences,
 } from "@/src/features/transactions/hooks"
 import type { PrivacyMode } from "@/src/features/transactions/preferences"
+import {
+  cancelReminders,
+  requestReminderPermission,
+} from "@/src/features/transactions/reminder-scheduler"
 
 const PRIVACY_LABELS: Record<PrivacyMode, string> = {
   local_only: "Local only",
@@ -70,6 +74,7 @@ export default function PreferencesScreen() {
   const [card, setCard] = useState("0")
   const [transfer, setTransfer] = useState("0")
   const [mixError, setMixError] = useState<string | null>(null)
+  const [remindersError, setRemindersError] = useState<string | null>(null)
   const initialized = useRef(false)
 
   // Seed the draft only on the first load: unrelated preference updates (e.g.
@@ -87,6 +92,31 @@ export default function PreferencesScreen() {
 
   const defaultAccountId = preferences?.defaultAccountId ?? null
   const privacyMode = preferences?.privacyMode ?? "local_only"
+  const remindersEnabled = preferences?.remindersEnabled ?? false
+
+  const handleReminders = useCallback(
+    async (enabled: boolean) => {
+      setRemindersError(null)
+
+      if (!enabled) {
+        await cancelReminders()
+        setPreferences.mutate({ remindersEnabled: false })
+        return
+      }
+
+      const granted = await requestReminderPermission()
+
+      if (!granted) {
+        setRemindersError(
+          "Allow notifications for Plata in your system settings to get reminders."
+        )
+        return
+      }
+
+      setPreferences.mutate({ remindersEnabled: true })
+    },
+    [setPreferences]
+  )
 
   const handleSaveMix = useCallback(async () => {
     const cashWeight = parseWeight(cash)
@@ -206,6 +236,34 @@ export default function PreferencesScreen() {
           <Button.Label>Save mix</Button.Label>
         </Button>
       </Card>
+
+      <Text className="mt-6 mb-2 text-muted text-sm">Reminders</Text>
+      <View accessibilityRole="radiogroup" className="flex-row flex-wrap gap-2">
+        <Chip
+          accessibilityRole="radio"
+          accessibilityState={{ selected: !remindersEnabled }}
+          disabled={setPreferences.isPending}
+          onPress={() => handleReminders(false)}
+          variant={remindersEnabled ? "soft" : "primary"}
+        >
+          <Chip.Label>Off</Chip.Label>
+        </Chip>
+        <Chip
+          accessibilityRole="radio"
+          accessibilityState={{ selected: remindersEnabled }}
+          disabled={setPreferences.isPending}
+          onPress={() => handleReminders(true)}
+          variant={remindersEnabled ? "primary" : "soft"}
+        >
+          <Chip.Label>On</Chip.Label>
+        </Chip>
+      </View>
+      <Text className="mt-2 text-muted text-xs">
+        A gentle nudge if you have not logged anything for a few days.
+      </Text>
+      {remindersError ? (
+        <Text className="mt-2 text-destructive text-sm">{remindersError}</Text>
+      ) : null}
 
       <Text className="mt-6 mb-2 text-muted text-sm">Privacy</Text>
       <Card className="p-4">
