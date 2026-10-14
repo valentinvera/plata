@@ -112,7 +112,11 @@ export default function AddTransactionScreen() {
       if (recognized) {
         setText(recognized)
       } else {
-        setError("We could not find a transaction in that image.")
+        // Keep whatever is already in the field: it may be typed or shared text,
+        // and wiping it here would lose the user's work.
+        setError(
+          "We could not find a transaction in that image. Your text was left unchanged."
+        )
       }
     } catch {
       setError("We could not read that image. Please try again.")
