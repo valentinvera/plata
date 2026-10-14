@@ -8,6 +8,7 @@ import {
 } from "expo-notifications"
 import { Platform } from "react-native"
 
+import { getAppMeta, setAppMeta } from "./app-meta-repository"
 import { planReminder } from "./reminders"
 
 setNotificationHandler({
@@ -19,6 +20,10 @@ setNotificationHandler({
       shouldShowList: true,
     }),
 })
+
+// Inactivity cycle (the last log time) we already armed a nudge for. Keeps the
+// reminder to a single nudge per cycle instead of rearming it on every launch.
+const REMINDER_CYCLE_KEY = "reminder_cycle"
 
 // Bumped on every sync/opt-out. A sync that gets superseded while awaiting a
 // permission or native call must not schedule after the fact, otherwise a stale
@@ -48,12 +53,14 @@ export async function cancelReminders(): Promise<void> {
     return
   }
 
+  await setAppMeta(REMINDER_CYCLE_KEY, "")
   await cancelAllScheduledNotificationsAsync()
 }
 
-// Schedules (or clears) the single "get up to date" reminder for the first
-// evening the user is eligible, based on when they last logged something.
-// Returns whether a reminder is now scheduled.
+// Schedules the single "get up to date" reminder for the first evening the user
+// is eligible, based on when they last logged something. A cycle is reminded at
+// most once; logging again starts a new cycle. Returns whether a reminder is now
+// scheduled.
 export async function syncReminder(
   lastLoggedAt: number | null,
   now: number = Date.now()
@@ -65,11 +72,18 @@ export async function syncReminder(
   generation += 1
   const mine = generation
 
+  const cycle = lastLoggedAt === null ? null : String(lastLoggedAt)
+
+  if (cycle !== null && (await getAppMeta(REMINDER_CYCLE_KEY)) === cycle) {
+    return false
+  }
+
   await cancelAllScheduledNotificationsAsync()
 
   const plan = planReminder(lastLoggedAt, now)
 
   if (!plan) {
+    await setAppMeta(REMINDER_CYCLE_KEY, "")
     return false
   }
 
@@ -88,6 +102,7 @@ export async function syncReminder(
       type: SchedulableTriggerInputTypes.DATE,
     },
   })
+  await setAppMeta(REMINDER_CYCLE_KEY, cycle ?? "")
 
   return true
 }
