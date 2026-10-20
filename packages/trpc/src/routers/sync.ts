@@ -4,25 +4,15 @@ import { and, asc, eq, gt, or, type SQL, sql } from "drizzle-orm"
 import { protectedProcedure, router } from "../index"
 import {
   decodeCursor,
+  dedupeBlobsById,
   encodeCursor,
   pullInput,
   pushInput,
   reserveKeyInput,
-  type SyncBlobInput,
   storeRecoveryInput,
 } from "../sync"
 
 const PULL_LIMIT = 500
-
-function dedupeById(blobs: readonly SyncBlobInput[]): SyncBlobInput[] {
-  const byId = new Map<string, SyncBlobInput>()
-
-  for (const blob of blobs) {
-    byId.set(blob.id, blob)
-  }
-
-  return [...byId.values()]
-}
 
 export const syncRouter = router({
   pull: protectedProcedure.input(pullInput).query(async ({ ctx, input }) => {
@@ -78,7 +68,7 @@ export const syncRouter = router({
         target: [device.userId, device.id],
       })
 
-    const blobs = dedupeById(input.blobs)
+    const blobs = dedupeBlobsById(input.blobs)
     let accepted: string[] = []
 
     if (blobs.length > 0) {

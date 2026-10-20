@@ -53,6 +53,20 @@ export type PushInput = z.infer<typeof pushInput>
 export type PullInput = z.infer<typeof pullInput>
 export type SyncBlobInput = z.infer<typeof blobInput>
 
+// Blobs are keyed by their id, so a batch that repeats a record must keep only
+// its last version: pushing both would make the accepted set ambiguous.
+export function dedupeBlobsById<T extends { id: string }>(
+  blobs: readonly T[]
+): T[] {
+  const byId = new Map<string, T>()
+
+  for (const blob of blobs) {
+    byId.set(blob.id, blob)
+  }
+
+  return [...byId.values()]
+}
+
 export interface SyncCursor {
   id: string
   updatedAt: Date
