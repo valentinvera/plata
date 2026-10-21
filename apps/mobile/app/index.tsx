@@ -172,6 +172,7 @@ function MoreGroup({
             accessibilityLabel={item.label}
             accessibilityRole="button"
             className="rounded-full bg-surface px-3 py-1.5"
+            hitSlop={8}
             key={item.label}
             onPress={item.onPress}
             style={({ pressed }) => (pressed ? styles.pressed : undefined)}

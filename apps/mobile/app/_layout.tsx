@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-query"
 import { router, Stack } from "expo-router"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
+import { StatusBar } from "expo-status-bar"
 import { HeroUINativeProvider } from "heroui-native"
 import { useEffect } from "react"
 import { Alert, AppState, Platform } from "react-native"
@@ -13,7 +14,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
 import { NavigationTheme } from "@/components/navigation-theme"
-import { AppThemeProvider } from "@/contexts/app-theme-context"
+import { AppThemeProvider, useAppTheme } from "@/contexts/app-theme-context"
 import { useSyncOnForeground } from "@/src/features/sync/hooks"
 import {
   transactionsQueryKey,
@@ -182,6 +183,14 @@ function ShareIntentHandler() {
   return null
 }
 
+// The home hides the native header, so the status bar has to follow the app
+// theme: light icons on the ink background, dark icons on the sand one.
+function ThemedStatusBar() {
+  const { isDark } = useAppTheme()
+
+  return <StatusBar style={isDark ? "light" : "dark"} />
+}
+
 function SyncHandler() {
   useSyncOnForeground()
   return null
@@ -249,6 +258,7 @@ export default function Layout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <KeyboardProvider>
             <AppThemeProvider>
+              <ThemedStatusBar />
               <NavigationTheme>
                 <HeroUINativeProvider>
                   <StackLayout />
