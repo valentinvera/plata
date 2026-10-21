@@ -26,8 +26,16 @@ const dateFormatter = new Intl.DateTimeFormat("es-AR", {
   month: "short",
 })
 
+const monthFormatter = new Intl.DateTimeFormat("es-AR", { month: "long" })
+
 export function formatDay(timestamp: number): string {
   return dateFormatter.format(new Date(timestamp))
+}
+
+// "Octubre": sentence case for the home header.
+export function formatMonth(timestamp: number): string {
+  const month = monthFormatter.format(new Date(timestamp))
+  return month.charAt(0).toUpperCase() + month.slice(1)
 }
 
 export function formatDateRange(range: DateRange): string {

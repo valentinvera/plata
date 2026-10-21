@@ -22,6 +22,7 @@ export function Container({
   className,
   isScrollable = true,
   scrollViewProps,
+  style,
   ...props
 }: PropsWithChildren<Props>) {
   const insets = useSafeAreaInsets()
@@ -29,9 +30,7 @@ export function Container({
   return (
     <AnimatedView
       className={cn("flex-1 bg-background", className)}
-      style={{
-        paddingBottom: insets.bottom,
-      }}
+      style={[{ paddingBottom: insets.bottom }, style]}
       {...props}
     >
       {isScrollable ? (

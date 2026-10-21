@@ -6,13 +6,15 @@ import {
 } from "@tanstack/react-query"
 import { router, Stack } from "expo-router"
 import { ShareIntentProvider, useShareIntentContext } from "expo-share-intent"
+import { StatusBar } from "expo-status-bar"
 import { HeroUINativeProvider } from "heroui-native"
 import { useEffect } from "react"
 import { Alert, AppState, Platform } from "react-native"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
 import { KeyboardProvider } from "react-native-keyboard-controller"
 
-import { AppThemeProvider } from "@/contexts/app-theme-context"
+import { NavigationTheme } from "@/components/navigation-theme"
+import { AppThemeProvider, useAppTheme } from "@/contexts/app-theme-context"
 import { useSyncOnForeground } from "@/src/features/sync/hooks"
 import {
   transactionsQueryKey,
@@ -38,32 +40,30 @@ import { queryClient } from "@/utils/trpc"
 
 function StackLayout() {
   return (
-    <Stack>
+    <Stack screenOptions={{ headerShadowVisible: false }}>
+      <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen
         name="add-transaction"
-        options={{ presentation: "modal", title: "Add transaction" }}
+        options={{ presentation: "modal", title: "Agregar movimiento" }}
       />
-      <Stack.Screen name="week" options={{ title: "This week" }} />
-      <Stack.Screen name="catch-up" options={{ title: "Catch up" }} />
-      <Stack.Screen name="budgets" options={{ title: "Budgets" }} />
-      <Stack.Screen name="accounts" options={{ title: "Accounts" }} />
-      <Stack.Screen name="account" options={{ title: "Account" }} />
-      <Stack.Screen name="search" options={{ title: "Search" }} />
-      <Stack.Screen name="categories" options={{ title: "Categories" }} />
-      <Stack.Screen name="preferences" options={{ title: "Preferences" }} />
-      <Stack.Screen name="export" options={{ title: "Export" }} />
-      <Stack.Screen name="duplicates" options={{ title: "Duplicates" }} />
-      <Stack.Screen name="recurring" options={{ title: "Recurring" }} />
-      <Stack.Screen name="insights" options={{ title: "Insights" }} />
+      <Stack.Screen name="week" options={{ title: "Esta semana" }} />
+      <Stack.Screen name="catch-up" options={{ title: "Ponerme al día" }} />
+      <Stack.Screen name="budgets" options={{ title: "Presupuestos" }} />
+      <Stack.Screen name="accounts" options={{ title: "Medios de pago" }} />
+      <Stack.Screen name="account" options={{ title: "Mi cuenta" }} />
+      <Stack.Screen name="search" options={{ title: "Buscar" }} />
+      <Stack.Screen name="categories" options={{ title: "Categorías" }} />
+      <Stack.Screen name="preferences" options={{ title: "Preferencias" }} />
+      <Stack.Screen name="export" options={{ title: "Exportar" }} />
+      <Stack.Screen name="duplicates" options={{ title: "Duplicados" }} />
+      <Stack.Screen name="recurring" options={{ title: "Recurrentes" }} />
+      <Stack.Screen name="insights" options={{ title: "Análisis" }} />
       <Stack.Screen
         name="notifications"
-        options={{ title: "Automatic import" }}
+        options={{ title: "Importación automática" }}
       />
       <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="transaction/[id]"
-        options={{ title: "Transaction" }}
-      />
+      <Stack.Screen name="transaction/[id]" options={{ title: "Movimiento" }} />
       <Stack.Screen
         name="modal"
         options={{ presentation: "modal", title: "Modal" }}
@@ -183,6 +183,14 @@ function ShareIntentHandler() {
   return null
 }
 
+// The home hides the native header, so the status bar has to follow the app
+// theme: light icons on the ink background, dark icons on the sand one.
+function ThemedStatusBar() {
+  const { isDark } = useAppTheme()
+
+  return <StatusBar style={isDark ? "light" : "dark"} />
+}
+
 function SyncHandler() {
   useSyncOnForeground()
   return null
@@ -250,13 +258,16 @@ export default function Layout() {
         <GestureHandlerRootView style={{ flex: 1 }}>
           <KeyboardProvider>
             <AppThemeProvider>
-              <HeroUINativeProvider>
-                <StackLayout />
-                <SyncHandler />
-                <NotificationDrain />
-                <ReminderScheduler />
-                <ShareIntentHandler />
-              </HeroUINativeProvider>
+              <ThemedStatusBar />
+              <NavigationTheme>
+                <HeroUINativeProvider>
+                  <StackLayout />
+                  <SyncHandler />
+                  <NotificationDrain />
+                  <ReminderScheduler />
+                  <ShareIntentHandler />
+                </HeroUINativeProvider>
+              </NavigationTheme>
             </AppThemeProvider>
           </KeyboardProvider>
         </GestureHandlerRootView>
