@@ -114,3 +114,23 @@ describe("catch-up across a year boundary", () => {
     expect(suggestions.map(({ amount }) => amount)).toEqual([50_000, 100_000])
   })
 })
+
+describe("catch-up amount validation", () => {
+  it("only offers complete exact amounts from a mixed batch", () => {
+    const suggestions = buildCatchUpSuggestions([
+      "Pagaste $12,34,56 en SUBE",
+      "Pagaste $1.234,56 en CARREFOUR",
+      "Pagaste $90071992547409,93 en SUBE",
+      "Cobraste USD 500 en ACME",
+    ])
+    const valid = suggestions.filter(isSuggestionValid)
+
+    expect(suggestions).toHaveLength(4)
+    expect(valid.map(({ amount, currency }) => ({ amount, currency }))).toEqual(
+      [
+        { amount: 123_456, currency: "ARS" },
+        { amount: 50_000, currency: "USD" },
+      ]
+    )
+  })
+})
