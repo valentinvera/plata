@@ -220,6 +220,17 @@ export async function listTransactionsFiltered(
     .slice(offset, offset + limit)
 }
 
+// Include tombstones: replaying a captured notification must not recreate a
+// movement the user deleted or repeatedly fail its primary-key insert.
+export async function hasTransaction(id: string): Promise<boolean> {
+  const database = await getDatabase()
+  const row = await database.getFirstAsync<{ found: number }>(
+    "SELECT 1 AS found FROM transactions WHERE id = ? LIMIT 1",
+    id
+  )
+  return row !== null
+}
+
 export async function getTransaction(id: string): Promise<Transaction | null> {
   const database = await getDatabase()
   const row = await database.getFirstAsync<TransactionRow>(
