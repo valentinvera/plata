@@ -6,7 +6,7 @@ import {
   QueryClient,
   QueryObserver,
 } from "@tanstack/react-query"
-import { LOCAL_DATA_OPTIONS } from "../local-data-options"
+import { LOCAL_DATA_NETWORK_MODE } from "../local-data-options"
 
 const clients: QueryClient[] = []
 const databases: Database[] = []
@@ -53,7 +53,7 @@ describe("local SQLite operations while offline", () => {
   it("reads uncached data without pausing or changing connectivity", async () => {
     const { client, queryKey, read } = harness()
     const result = client.fetchQuery({
-      ...LOCAL_DATA_OPTIONS,
+      networkMode: LOCAL_DATA_NETWORK_MODE,
       queryKey,
       queryFn: read,
     })
@@ -65,7 +65,7 @@ describe("local SQLite operations while offline", () => {
   it("saves a movement and refreshes the active query before the mutation finishes", async () => {
     const { client, database, queryKey, read } = harness()
     const observer = new QueryObserver(client, {
-      ...LOCAL_DATA_OPTIONS,
+      networkMode: LOCAL_DATA_NETWORK_MODE,
       queryKey,
       queryFn: read,
     })
@@ -73,7 +73,7 @@ describe("local SQLite operations while offline", () => {
     try {
       await observer.refetch()
       const mutation = client.getMutationCache().build(client, {
-        ...LOCAL_DATA_OPTIONS,
+        networkMode: LOCAL_DATA_NETWORK_MODE,
         mutationFn: (amount: number) =>
           Promise.resolve(
             database.run("INSERT INTO transactions VALUES (?)", [amount])
@@ -95,7 +95,7 @@ describe("local SQLite operations while offline", () => {
   it("loads the next local search page while offline", async () => {
     const { client, database, queryKey } = harness()
     const observer = new InfiniteQueryObserver(client, {
-      ...LOCAL_DATA_OPTIONS,
+      networkMode: LOCAL_DATA_NETWORK_MODE,
       enabled: false,
       queryKey,
       initialPageParam: 0,
@@ -120,7 +120,7 @@ describe("local SQLite operations while offline", () => {
     const { client, queryKey, read } = harness()
     let attempts = 0
     const result = await client.fetchQuery({
-      ...LOCAL_DATA_OPTIONS,
+      networkMode: LOCAL_DATA_NETWORK_MODE,
       queryKey,
       retry: 1,
       retryDelay: 0,
@@ -139,7 +139,7 @@ describe("local SQLite operations while offline", () => {
     const { client, database, read } = harness()
     let attempts = 0
     const mutation = client.getMutationCache().build(client, {
-      ...LOCAL_DATA_OPTIONS,
+      networkMode: LOCAL_DATA_NETWORK_MODE,
       retry: 1,
       retryDelay: 0,
       mutationFn: (amount: number) => {
