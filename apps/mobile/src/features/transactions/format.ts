@@ -1,3 +1,4 @@
+import { centsToDecimal } from "./amount-text"
 import type { DateRange } from "./periods"
 import type { Currency } from "./types"
 
@@ -43,7 +44,7 @@ export function formatDateRange(range: DateRange): string {
 }
 
 export function formatAmountInput(cents: number): string {
-  return (cents / 100).toFixed(2).replace(".", ",")
+  return centsToDecimal(cents, ",")
 }
 
 const AMOUNT_INPUT_REGEX =

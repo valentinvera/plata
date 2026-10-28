@@ -102,3 +102,19 @@ describe("transaction date input", () => {
     )
   })
 })
+
+describe("exact editable cent serialization", () => {
+  it("preserves two decimal places, signs and sub-unit amounts", () => {
+    expect(formatAmountInput(1)).toBe("0,01")
+    expect(formatAmountInput(10)).toBe("0,10")
+    expect(formatAmountInput(100)).toBe("1,00")
+    expect(formatAmountInput(-1)).toBe("-0,01")
+    expect(formatAmountInput(-123_456)).toBe("-1234,56")
+  })
+  it("round-trips every cent near the safe integer limit without changing the amount", () => {
+    for (let offset = 0; offset < 100; offset += 1) {
+      const cents = Number.MAX_SAFE_INTEGER - offset
+      expect(parseAmountInput(formatAmountInput(cents))).toBe(cents)
+    }
+  })
+})
