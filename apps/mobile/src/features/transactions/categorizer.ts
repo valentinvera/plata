@@ -1,4 +1,8 @@
-import { DEFAULT_CATEGORIES, UNCATEGORIZED_ID } from "./categories"
+import {
+  DEFAULT_CATEGORIES,
+  normalizeCategoryKeywords,
+  UNCATEGORIZED_ID,
+} from "./categories"
 import { containsKeyword, normalizeText } from "./text"
 import type { CategorizationResult, Category } from "./types"
 
@@ -15,7 +19,9 @@ function findBestMatch(
 
   for (const category of categories) {
     let matches = 0
-    for (const keyword of category.keywords) {
+    // Existing saved rules can predate whitespace normalization. Canonicalize
+    // and deduplicate here too, so aliases cannot inflate match confidence.
+    for (const keyword of normalizeCategoryKeywords(category.keywords)) {
       if (containsKeyword(normalized, keyword)) {
         matches += 1
       }

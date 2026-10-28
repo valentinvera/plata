@@ -351,3 +351,24 @@ describe("incomplete payment notifications", () => {
     })
   })
 })
+
+describe("notification category phrase whitespace", () => {
+  it("uses the saved custom phrase across notification line breaks", () => {
+    expect(
+      buildNotificationTransaction(
+        {
+          app: "com.bank",
+          bigText: "",
+          text: "Pagaste $500 en PET\nSHOP",
+          time: "1700000000000",
+          title: "Pago",
+        },
+        Date.now(),
+        [{ id: "pets", keywords: ["PET  SHOP"], name: "Mascotas" }]
+      )
+    ).toMatchObject({
+      amount: 50_000,
+      categoryId: "pets",
+    })
+  })
+})
