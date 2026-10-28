@@ -1,4 +1,5 @@
 import type { Account } from "./accounts"
+import { centsToDecimal } from "./amount-text"
 import type { Category, Transaction } from "./types"
 
 export type ExportFormat = "csv" | "json"
@@ -36,10 +37,6 @@ function escapeCsv(value: string): string {
     : neutralized
 }
 
-function amountText(cents: number): string {
-  return (cents / 100).toFixed(2)
-}
-
 function lookupName(
   id: string | null,
   entries: readonly { id: string; name: string }[]
@@ -58,7 +55,7 @@ export function transactionsToCsv(
 ): string {
   const rows = transactions.map((transaction) => [
     new Date(transaction.occurredAt).toISOString(),
-    amountText(transaction.amount),
+    centsToDecimal(transaction.amount),
     transaction.currency,
     transaction.kind,
     lookupName(transaction.categoryId, categories),

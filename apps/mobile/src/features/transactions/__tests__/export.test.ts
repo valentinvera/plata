@@ -187,3 +187,19 @@ describe("saved category exports", () => {
     expect(JSON.parse(json.content).categories[0].name).toBe(category.name)
   })
 })
+
+describe("exact CSV cent serialization", () => {
+  it.each([
+    [9_007_199_254_740_990, "90071992547409.90"],
+    [9_007_199_254_740_987, "90071992547409.87"],
+    [9_007_199_254_740_985, "90071992547409.85"],
+  ])("preserves the stored cent value %s in CSV", (amount, expected) => {
+    const csv = buildExport(
+      "csv",
+      [makeTransaction({ amount: Number(amount) })],
+      DEFAULT_CATEGORIES,
+      ACCOUNTS
+    ).content
+    expect(csv.split("\n")[1]?.split(",")[1]).toBe(expected)
+  })
+})
