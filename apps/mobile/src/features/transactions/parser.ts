@@ -13,6 +13,9 @@ const INCOME_KEYWORDS = [
 
 const USD_KEYWORDS = ["dolares", "usd", "u$s", "us$"]
 
+// Leap-day occurrences can be eight years apart around a non-leap century.
+const MAX_DATE_YEAR_LOOKBACK = 8
+
 const DATE_REGEX = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/
 const MERCHANT_REGEX = /\ben\s+(.+?)(?=\s+(?:el|del|por)\s+(?:\d|\$)|\s+\$|$)/i
 const CURRENCY_AMOUNT_REGEX = /(?:\$|u\$s|us\$)\s*(\d[\d.,]*)/i
@@ -98,19 +101,34 @@ function parseDate(text: string, now: number): number | null {
     return null
   }
 
-  const year = resolveYear(match?.[3], new Date(now).getFullYear())
-  const date = new Date(year, month - 1, day, 12)
-
-  // Reject dates that overflow into another day (e.g. 31/02 -> Mar 3).
+  const reference = new Date(now)
+  const rawYear = match?.[3]
+  let year = resolveYear(rawYear, reference.getFullYear())
   if (
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
+    rawYear === undefined &&
+    (month > reference.getMonth() + 1 ||
+      (month === reference.getMonth() + 1 && day > reference.getDate()))
   ) {
-    return null
+    year -= 1
   }
 
-  return date.getTime()
+  // Yearless imports describe past movements. Compare calendar days, not the
+  // noon placeholder against the clock, so today's morning import stays today.
+  const lookback = rawYear === undefined ? MAX_DATE_YEAR_LOOKBACK : 0
+  for (let yearsAgo = 0; yearsAgo <= lookback; yearsAgo += 1) {
+    const candidateYear = year - yearsAgo
+    const date = new Date(candidateYear, month - 1, day, 12)
+    if (
+      date.getFullYear() === candidateYear &&
+      date.getMonth() === month - 1 &&
+      date.getDate() === day
+    ) {
+      return date.getTime()
+    }
+  }
+
+  // Never roll an impossible date (31/02) or an invalid explicit year forward.
+  return null
 }
 
 export function parseTransactionText(
