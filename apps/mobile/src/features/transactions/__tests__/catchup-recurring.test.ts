@@ -247,3 +247,115 @@ describe("recurring calendar anchors", () => {
     ])
   })
 })
+
+describe("exclusive recurring occurrence matching", () => {
+  const history = [11, 18, 25].map((day) =>
+    makeTransaction({
+      id: `weekly-${day}`,
+      occurredAt: new Date(2026, 9, day, 9).getTime(),
+    })
+  )
+  const firstDue = new Date(2026, 10, 1, 9).getTime()
+  const secondDue = new Date(2026, 10, 8, 9).getTime()
+  const now = new Date(2026, 10, 10, 9).getTime()
+
+  function pending(occurredAt: number, id = "pending") {
+    return makeTransaction({ id, occurredAt, state: "suggested" })
+  }
+
+  it.each([
+    [4, secondDue],
+    [5, firstDue],
+  ])(
+    "matches a pending payment on November %s to only its nearest week",
+    (day, missing) => {
+      const suggestions = suggestRecurringTransactions(
+        [...history, pending(new Date(2026, 10, day, 9).getTime())],
+        now
+      )
+
+      expect(suggestions.map(({ occurredAt }) => occurredAt)).toEqual([missing])
+    }
+  )
+
+  it.each([
+    [-1, secondDue],
+    [0, secondDue],
+    [1, firstDue],
+  ])(
+    "assigns the midpoint once, preferring the earlier occurrence at offset %s",
+    (offset, missing) => {
+      const midpoint = (firstDue + secondDue) / 2
+      const suggestions = suggestRecurringTransactions(
+        [...history, pending(midpoint + offset)],
+        now
+      )
+
+      expect(suggestions.map(({ occurredAt }) => occurredAt)).toEqual([missing])
+    }
+  )
+
+  it("does not use an entry closer to the last recorded week to hide a missing week", () => {
+    const suggestions = suggestRecurringTransactions(
+      [...history, pending(new Date(2026, 9, 28, 9).getTime())],
+      now
+    )
+
+    expect(suggestions.map(({ occurredAt }) => occurredAt)).toEqual([
+      firstDue,
+      secondDue,
+    ])
+  })
+
+  it("does not use a future occurrence to cover an older missing week", () => {
+    const suggestions = suggestRecurringTransactions(
+      [...history, pending(new Date(2026, 10, 12, 9).getTime())],
+      now
+    )
+
+    expect(suggestions.map(({ occurredAt }) => occurredAt)).toEqual([
+      firstDue,
+      secondDue,
+    ])
+  })
+
+  it("still suppresses two occurrences when each has its own pending payment", () => {
+    const suggestions = suggestRecurringTransactions(
+      [
+        ...history,
+        pending(new Date(2026, 10, 2, 9).getTime(), "first"),
+        pending(new Date(2026, 10, 7, 9).getTime(), "second"),
+      ],
+      now
+    )
+
+    expect(suggestions).toEqual([])
+  })
+
+  it("does not spread duplicate pending entries across separate weeks", () => {
+    const suggestions = suggestRecurringTransactions(
+      [
+        ...history,
+        pending(new Date(2026, 10, 3, 9).getTime(), "first"),
+        pending(new Date(2026, 10, 4, 9).getTime(), "second"),
+      ],
+      now
+    )
+
+    expect(suggestions.map(({ occurredAt }) => occurredAt)).toEqual([secondDue])
+  })
+
+  it.each([
+    [-5 * 24 * 60 * 60 * 1000, 0],
+    [5 * 24 * 60 * 60 * 1000, 0],
+    [5 * 24 * 60 * 60 * 1000 + 1, 1],
+  ])("retains the monthly tolerance at offset %s", (offset, count) => {
+    const due = new Date(2026, 3, 15, 9).getTime()
+    expect(
+      suggestRecurringTransactions(
+        [...MONTHLY, pending(due + offset)],
+        new Date(2026, 3, 25, 9).getTime()
+      )
+    ).toHaveLength(count)
+  })
+})

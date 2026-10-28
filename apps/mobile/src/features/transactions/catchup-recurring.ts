@@ -76,16 +76,26 @@ function monthlyDay(
   )
 }
 
-function hasNearby(
+function hasMatchingOccurrence(
   transactions: readonly Transaction[],
   payment: RecurringPayment,
-  due: number
+  previousDue: number,
+  due: number,
+  nextDue: number
 ): boolean {
-  return transactions.some(
-    (transaction) =>
-      matchesSeries(transaction, payment) &&
-      Math.abs(transaction.occurredAt - due) <= NEAR_DAYS * DAY_MS
-  )
+  return transactions.some((transaction) => {
+    if (!matchesSeries(transaction, payment)) {
+      return false
+    }
+    const distance = Math.abs(transaction.occurredAt - due)
+    // Weekly tolerance windows overlap. Match only the nearest calendar
+    // occurrence; an exact midpoint belongs to the earlier one, never both.
+    return (
+      distance <= NEAR_DAYS * DAY_MS &&
+      distance < Math.abs(transaction.occurredAt - previousDue) &&
+      distance <= Math.abs(transaction.occurredAt - nextDue)
+    )
+  })
 }
 
 // Learn from confirmed history, then reconstruct missing occurrences per series.
@@ -102,10 +112,14 @@ export function suggestRecurringTransactions(
   for (const payment of detectRecurring(confirmed)) {
     const day = monthlyDay(payment, confirmed)
     let offset = 1
+    let previousDue = payment.lastOccurredAt
     let due = occurrenceAt(payment, offset, day)
 
     while (due < now) {
-      if (!hasNearby(transactions, payment, due)) {
+      const nextDue = occurrenceAt(payment, offset + 1, day)
+      if (
+        !hasMatchingOccurrence(transactions, payment, previousDue, due, nextDue)
+      ) {
         suggestions.push({
           accountId: payment.accountId,
           amount: payment.averageAmount,
@@ -118,7 +132,8 @@ export function suggestRecurringTransactions(
       }
 
       offset += 1
-      due = occurrenceAt(payment, offset, day)
+      previousDue = due
+      due = nextDue
     }
   }
 
