@@ -372,3 +372,29 @@ describe("notification category phrase whitespace", () => {
     })
   })
 })
+
+describe("notification movement direction", () => {
+  it("does not record paid professional fees as income", () => {
+    expect(
+      buildNotificationTransaction({
+        app: "com.bank",
+        bigText: "",
+        text: "Pagaste $500 de honorarios",
+        time: "1700000000000",
+        title: "Pago",
+      })
+    ).toMatchObject({ amount: 50_000, kind: "expense", state: "suggested" })
+  })
+
+  it("does not let a generic payment title override an explicit incoming action", () => {
+    expect(
+      buildNotificationTransaction({
+        app: "com.bank",
+        bigText: "",
+        text: "Recibiste $500 de honorarios",
+        time: "1700000000000",
+        title: "Pago",
+      })
+    ).toMatchObject({ amount: 50_000, kind: "income", state: "suggested" })
+  })
+})

@@ -11,6 +11,11 @@ const INCOME_KEYWORDS = [
   "sueldo",
 ]
 
+// Direction verbs before the selected amount are stronger evidence than nouns
+// such as "honorarios" or words that happen to appear in a merchant name.
+const DIRECTION_VERB =
+  /\b(?:(acreditaron|cobraste|recibiste)|(abonaste|compraste|pagaste|transferiste|enviaste))\b/
+
 // Leap-day occurrences can be eight years apart around a non-leap century.
 const MAX_DATE_YEAR_LOOKBACK = 8
 
@@ -51,6 +56,7 @@ export function parseAmountToCents(raw: string): number | null {
 
 interface ExtractedAmount {
   currency: Currency
+  start: number
   token: string
 }
 
@@ -79,12 +85,17 @@ function extractAmount(text: string): ExtractedAmount | null {
     cleanToken === token ? text.slice((match.index ?? 0) + match[0].length) : ""
   return {
     currency: amountCurrency(prefixed?.[1], suffix),
+    start: match.index ?? 0,
     // Keep malformed grouping intact so it cannot become a valid prefix.
     token: cleanToken,
   }
 }
 
-function detectKind(normalized: string): TransactionKind {
+function detectKind(normalized: string, lead: string): TransactionKind {
+  const direction = lead.match(DIRECTION_VERB)
+  if (direction) {
+    return direction[1] ? "income" : "expense"
+  }
   return INCOME_KEYWORDS.some((keyword) => containsKeyword(normalized, keyword))
     ? "income"
     : "expense"
@@ -156,11 +167,14 @@ export function parseTransactionText(
 ): ParsedTransaction {
   const normalized = normalizeText(text)
   const extracted = extractAmount(text)
+  const lead = extracted
+    ? normalizeText(text.slice(0, extracted.start))
+    : normalized
 
   return {
     amount: extracted ? parseAmountToCents(extracted.token) : null,
     currency: extracted?.currency ?? "ARS",
-    kind: detectKind(normalized),
+    kind: detectKind(normalized, lead),
     merchant: detectMerchant(text),
     occurredAt: parseDate(text, now),
   }
