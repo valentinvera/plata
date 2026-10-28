@@ -26,6 +26,7 @@ export interface TransactionUpdate {
   amount?: number
   categoryId?: string
   merchant?: string | null
+  occurredAt?: number
 }
 
 const UPDATE_COLUMNS: readonly [keyof TransactionUpdate, string][] = [
@@ -33,6 +34,7 @@ const UPDATE_COLUMNS: readonly [keyof TransactionUpdate, string][] = [
   ["amount", "amount"],
   ["categoryId", "category_id"],
   ["merchant", "merchant"],
+  ["occurredAt", "occurred_at"],
 ]
 
 function buildTransaction(input: NewTransaction, now: number): Transaction {
