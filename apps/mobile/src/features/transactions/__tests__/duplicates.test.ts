@@ -303,3 +303,19 @@ describe("duplicate cluster time span", () => {
     ])
   })
 })
+
+describe("duplicate merchant whitespace", () => {
+  it("matches OCR spacing variants without changing the original merchant", () => {
+    const first = makeTransaction({
+      id: "space-a",
+      merchant: "Café del Centro",
+    })
+    const second = makeTransaction({
+      id: "space-b",
+      merchant: "CAFÉ\nDEL\u00a0CENTRO",
+      occurredAt: START + MINUTE,
+    })
+    expect(findDuplicateGroups([first, second])).toHaveLength(1)
+    expect(second.merchant).toBe("CAFÉ\nDEL\u00a0CENTRO")
+  })
+})

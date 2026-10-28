@@ -170,3 +170,14 @@ describe("catch-up amount currency", () => {
     )
   })
 })
+
+describe("catch-up category phrase whitespace", () => {
+  it("categorizes a pasted movement with nonbreaking spaces using legacy rules", () => {
+    const [suggestion] = buildCatchUpSuggestions(
+      ["Pagaste $500 en PET\u00a0SHOP"],
+      1_700_000_000_000,
+      [{ id: "pets", keywords: ["Pet\tShop"], name: "Mascotas" }]
+    )
+    expect(suggestion).toMatchObject({ amount: 50_000, categoryId: "pets" })
+  })
+})

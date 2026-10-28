@@ -74,3 +74,17 @@ describe("categorize with custom categories", () => {
     ).toBe("work")
   })
 })
+
+describe("stored phrase normalization", () => {
+  it("deduplicates equivalent whitespace before saving rules", () => {
+    expect(
+      normalizeCategoryKeywords([
+        "Pet Shop",
+        " pet  shop ",
+        "PET\nSHOP",
+        "pet\u00a0shop",
+        "\t\n",
+      ])
+    ).toEqual(["pet shop"])
+  })
+})

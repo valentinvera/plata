@@ -223,3 +223,19 @@ describe("detectRecurring", () => {
     expect(detectRecurring(transactions)).toHaveLength(2)
   })
 })
+
+describe("recurring merchant whitespace", () => {
+  it("learns one series across OCR whitespace variants", () => {
+    const history = ["Pet Shop", "PET\nSHOP", "Pet\u00a0Shop"].map(
+      (merchant, index) =>
+        makeTransaction({
+          id: `space-${index}`,
+          merchant,
+          occurredAt: START + index * 30 * DAY,
+        })
+    )
+    expect(detectRecurring(history)).toMatchObject([
+      { cadence: "monthly", occurrences: 3 },
+    ])
+  })
+})
