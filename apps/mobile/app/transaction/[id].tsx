@@ -9,7 +9,7 @@ import {
   TextField,
 } from "heroui-native"
 import { useCallback, useState } from "react"
-import { ScrollView, Text, View } from "react-native"
+import { Pressable, ScrollView, Text, View } from "react-native"
 
 import { Container } from "@/components/container"
 import {
@@ -28,7 +28,10 @@ import {
   useTransaction,
   useUpdateTransaction,
 } from "@/src/features/transactions/hooks"
-import type { Transaction } from "@/src/features/transactions/types"
+import type {
+  Transaction,
+  TransactionKind,
+} from "@/src/features/transactions/types"
 
 const CATEGORY_OPTIONS = [...DEFAULT_CATEGORIES, UNCATEGORIZED_CATEGORY]
 
@@ -60,6 +63,7 @@ export default function TransactionDetailScreen() {
 }
 
 function TransactionForm({ transaction }: { transaction: Transaction }) {
+  const [kind, setKind] = useState<TransactionKind>(transaction.kind)
   const [amountInput, setAmountInput] = useState(
     formatAmountInput(transaction.amount)
   )
@@ -98,6 +102,7 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
           accountId,
           amount,
           categoryId,
+          kind,
           merchant: merchant.trim() || null,
           occurredAt,
         },
@@ -110,6 +115,7 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
     accountId,
     amount,
     categoryId,
+    kind,
     merchant,
     occurredAt,
     transaction.id,
@@ -131,6 +137,59 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
       <Text className="pt-3 pb-4 font-bold text-2xl text-foreground">
         Edit transaction
       </Text>
+
+      <View className="mb-4 gap-2">
+        <Text className="text-foreground">Tipo de movimiento</Text>
+        <View
+          accessibilityLabel="Tipo de movimiento"
+          className="flex-row gap-3"
+        >
+          <Pressable
+            accessibilityLabel="Gasto"
+            accessibilityRole="button"
+            accessibilityState={{
+              disabled: isBusy,
+              selected: kind === "expense",
+            }}
+            aria-pressed={kind === "expense"}
+            className={`min-h-12 flex-1 items-center justify-center rounded-xl px-3 py-3 ${kind === "expense" ? "bg-accent" : "bg-surface"}`}
+            disabled={isBusy}
+            onPress={() => setKind("expense")}
+          >
+            <Text
+              className={
+                kind === "expense"
+                  ? "font-semibold text-accent-foreground"
+                  : "text-foreground"
+              }
+            >
+              Gasto
+            </Text>
+          </Pressable>
+          <Pressable
+            accessibilityLabel="Ingreso"
+            accessibilityRole="button"
+            accessibilityState={{
+              disabled: isBusy,
+              selected: kind === "income",
+            }}
+            aria-pressed={kind === "income"}
+            className={`min-h-12 flex-1 items-center justify-center rounded-xl px-3 py-3 ${kind === "income" ? "bg-accent" : "bg-surface"}`}
+            disabled={isBusy}
+            onPress={() => setKind("income")}
+          >
+            <Text
+              className={
+                kind === "income"
+                  ? "font-semibold text-accent-foreground"
+                  : "text-foreground"
+              }
+            >
+              Ingreso
+            </Text>
+          </Pressable>
+        </View>
+      </View>
 
       <TextField>
         <Label>{`Amount (${transaction.currency})`}</Label>
