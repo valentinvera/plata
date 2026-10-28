@@ -131,3 +131,22 @@ export function resolveDefaultAccountId(
 
   return accounts.find((account) => account.kind === kind)?.id ?? null
 }
+
+// Manual input owns its explicit selection. Without one, wait for preferences
+// before falling back, so an async load cannot silently select the first account.
+export function resolveInputAccountId(
+  selectedId: string | null,
+  preferences: Preferences | undefined,
+  accounts: readonly Account[]
+): string | null {
+  const selected = accounts.find((account) => account.id === selectedId)
+  if (selected) {
+    return selected.id
+  }
+  if (!preferences) {
+    return null
+  }
+  return (
+    resolveDefaultAccountId(preferences, accounts) ?? accounts[0]?.id ?? null
+  )
+}
