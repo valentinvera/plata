@@ -47,13 +47,7 @@ export default function CatchUpScreen() {
   const canSave = valid.length > 0 && !createTransactions.isPending
 
   const recurringSuggestions = useMemo(
-    () =>
-      suggestRecurringTransactions(
-        (allData ?? []).filter(
-          (transaction) => transaction.state === "confirmed"
-        ),
-        now
-      ),
+    () => suggestRecurringTransactions(allData ?? [], now),
     [allData, now]
   )
   const canAddRecurring =

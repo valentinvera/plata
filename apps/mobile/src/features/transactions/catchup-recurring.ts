@@ -1,13 +1,11 @@
 import { createId } from "./id"
-import type { DateRange } from "./periods"
-import { detectRecurring, type RecurringCadence } from "./recurring"
+import { detectRecurring, type RecurringPayment } from "./recurring"
 import { normalizeText } from "./text"
 import type { Currency, Transaction } from "./types"
 
 const DAY_MS = 24 * 60 * 60 * 1000
 const DAYS_PER_WEEK = 7
 const NEAR_DAYS = 5
-const DEFAULT_MISSING_DAYS = 30
 
 export interface RecurringSuggestion {
   accountId: string | null
@@ -19,86 +17,95 @@ export interface RecurringSuggestion {
   occurredAt: number
 }
 
-// Advances by calendar month (clamping the day) or a fixed week, so a same-day
-// monthly series does not drift (Jan 15 -> Feb 15 -> Mar 15).
-function advance(timestamp: number, cadence: RecurringCadence): number {
-  if (cadence !== "monthly") {
-    return timestamp + DAYS_PER_WEEK * DAY_MS
+// Calculate each occurrence from the original date, so clamping January 31
+// to February 28 does not move the March occurrence to the 28th as well.
+function occurrenceAt(
+  payment: RecurringPayment,
+  offset: number,
+  day: number
+): number {
+  const date = new Date(payment.lastOccurredAt)
+  if (payment.cadence === "weekly") {
+    date.setDate(date.getDate() + DAYS_PER_WEEK * offset)
+    return date.getTime()
   }
 
-  const date = new Date(timestamp)
-  const day = date.getDate()
-
   date.setDate(1)
-  date.setMonth(date.getMonth() + 1)
+  date.setMonth(date.getMonth() + offset)
   const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate()
   date.setDate(Math.min(day, lastDay))
-
   return date.getTime()
 }
 
-// The period the user has not recorded yet: from the latest transaction to now
-// (or the last 30 days when there is no history).
-export function missingRange(
-  transactions: readonly Transaction[],
-  now: number
-): DateRange {
-  let latest = 0
+function matchesSeries(
+  transaction: Transaction,
+  payment: RecurringPayment
+): boolean {
+  return (
+    transaction.kind === "expense" &&
+    transaction.accountId === payment.accountId &&
+    transaction.currency === payment.currency &&
+    transaction.merchant !== null &&
+    normalizeText(transaction.merchant) === normalizeText(payment.merchant)
+  )
+}
 
-  for (const transaction of transactions) {
-    if (transaction.occurredAt > latest) {
-      latest = transaction.occurredAt
-    }
+function monthlyDay(
+  payment: RecurringPayment,
+  confirmed: readonly Transaction[]
+): number {
+  const latest = new Date(payment.lastOccurredAt)
+  const day = latest.getDate()
+  const lastDay = new Date(
+    latest.getFullYear(),
+    latest.getMonth() + 1,
+    0
+  ).getDate()
+  if (payment.cadence !== "monthly" || day !== lastDay) {
+    return day
   }
 
-  return {
-    end: now,
-    start: latest > 0 ? latest : now - DEFAULT_MISSING_DAYS * DAY_MS,
-  }
+  // A confirmed payment on the last day of a short month can be a clamped
+  // occurrence. Recover its billing day from the same confirmed series.
+  return confirmed.reduce(
+    (billingDay, transaction) =>
+      matchesSeries(transaction, payment)
+        ? Math.max(billingDay, new Date(transaction.occurredAt).getDate())
+        : billingDay,
+    day
+  )
 }
 
 function hasNearby(
   transactions: readonly Transaction[],
-  accountId: string | null,
-  merchant: string,
-  currency: Currency,
+  payment: RecurringPayment,
   due: number
 ): boolean {
-  const key = normalizeText(merchant)
-
   return transactions.some(
     (transaction) =>
-      transaction.accountId === accountId &&
-      transaction.currency === currency &&
-      transaction.merchant !== null &&
-      normalizeText(transaction.merchant) === key &&
+      matchesSeries(transaction, payment) &&
       Math.abs(transaction.occurredAt - due) <= NEAR_DAYS * DAY_MS
   )
 }
 
-// Projects each recurring payment into the missing period, skipping dates that
-// already have a matching transaction.
+// Learn from confirmed history, then reconstruct missing occurrences per series.
+// Both confirmed and pending expenses prevent the same occurrence being offered.
 export function suggestRecurringTransactions(
   transactions: readonly Transaction[],
   now: number = Date.now()
 ): RecurringSuggestion[] {
-  const range = missingRange(transactions, now)
+  const confirmed = transactions.filter(
+    (transaction) => transaction.state === "confirmed"
+  )
   const suggestions: RecurringSuggestion[] = []
 
-  for (const payment of detectRecurring(transactions)) {
-    let due = advance(payment.lastOccurredAt, payment.cadence)
+  for (const payment of detectRecurring(confirmed)) {
+    const day = monthlyDay(payment, confirmed)
+    let offset = 1
+    let due = occurrenceAt(payment, offset, day)
 
-    while (due < range.end) {
-      if (
-        due >= range.start &&
-        !hasNearby(
-          transactions,
-          payment.accountId,
-          payment.merchant,
-          payment.currency,
-          due
-        )
-      ) {
+    while (due < now) {
+      if (!hasNearby(transactions, payment, due)) {
         suggestions.push({
           accountId: payment.accountId,
           amount: payment.averageAmount,
@@ -110,7 +117,8 @@ export function suggestRecurringTransactions(
         })
       }
 
-      due = advance(due, payment.cadence)
+      offset += 1
+      due = occurrenceAt(payment, offset, day)
     }
   }
 
