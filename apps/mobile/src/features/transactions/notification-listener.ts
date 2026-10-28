@@ -1,11 +1,9 @@
 import { Platform } from "react-native"
 
-import NotificationCapture, {
-  type CapturedNotification,
-} from "@/modules/notification-capture/src/notification-capture-module"
+import NotificationCapture from "@/modules/notification-capture/src/notification-capture-module"
 
-import type { NotificationPayload } from "./notification"
 import { ingestNotificationPayload } from "./notification-ingest"
+import { createNotificationDrainer } from "./notification-processing"
 
 export type NotificationPermission = "authorized" | "denied" | "unknown"
 
@@ -25,50 +23,18 @@ export function openNotificationSettings(): void {
   }
 }
 
-function toPayload(item: CapturedNotification): NotificationPayload {
-  return {
-    app: item.app,
-    bigText: item.bigText,
-    text: item.text,
-    time: item.time,
-    title: item.title,
-  }
-}
+const drainNotifications = NotificationCapture
+  ? createNotificationDrainer({
+      ingest: ingestNotificationPayload,
+      queue: NotificationCapture,
+    })
+  : null
 
-// Turns the notifications captured while the app was away into suggestions.
-// Returns how many were ingested. The native queue is only acknowledged after
-// processing, so a crash mid-drain re-processes (idempotently) next time.
+// A shared drain preserves the native read/ack snapshot. Failed batches stay
+// queued; successful inserts are recognized by source id on the next attempt.
 export async function drainCapturedNotifications(): Promise<number> {
-  if (Platform.OS !== "android" || !NotificationCapture) {
+  if (Platform.OS !== "android" || !drainNotifications) {
     return 0
   }
-
-  const raw = await NotificationCapture.readPendingsAsync()
-  let items: unknown
-
-  try {
-    items = JSON.parse(raw)
-  } catch {
-    return 0
-  }
-
-  if (!Array.isArray(items)) {
-    return 0
-  }
-
-  let ingested = 0
-
-  for (const item of items) {
-    const payload = toPayload(item as CapturedNotification)
-    // biome-ignore lint/performance/noAwaitInLoops: SQLite writes stay sequential
-    const accepted = await ingestNotificationPayload(payload)
-
-    if (accepted) {
-      ingested += 1
-    }
-  }
-
-  await NotificationCapture.ackAsync()
-
-  return ingested
+  return await drainNotifications()
 }
