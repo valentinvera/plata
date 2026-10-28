@@ -3,34 +3,104 @@
 @import "uniwind";
 @import "heroui-native/styles";
 
+@source "../src/features/home";
+@source "../components/finance";
+
 /* Plata brand palette (brand/tokens.json) mapped onto HeroUI Native tokens.
    The overrides must live under `:root` to match how `heroui-native/styles`
    declares them; without it the un-scoped rule loses and the accent stays blue.
-   Light mode uses the darker green #0E7C5A so the filled selection state keeps
-   >=3:1 contrast against white; dark mode uses the brand mint #12B886 with the
-   brand ink #10221C foreground for readable contrast. */
+   Light mode is warm (sand background, ink text, deep green accent); dark mode
+   keeps the same greens over ink. Coral is the "negative" semantic, mint the
+   positive one. Card radii come from the default `--radius` scale (xl = 12px,
+   2xl = 16px), which already matches the brand's 12-16px range. */
 @layer theme {
   :root {
     @variant light {
-      --accent: oklch(0.5212 0.1058 165.17);
-      --accent-foreground: oklch(1 0 0);
+      --background: #f4f1ea;
+      --foreground: #10221c;
 
-      --success: oklch(0.5212 0.1058 165.17);
-      --success-foreground: oklch(1 0 0);
+      --surface: #ffffff;
+      --surface-foreground: #10221c;
 
-      --danger: oklch(0.7091 0.1835 28.37);
-      --danger-foreground: oklch(0.234 0.0268 170.56);
+      --surface-secondary: #ede8de;
+      --surface-secondary-foreground: #10221c;
+
+      --surface-tertiary: #e5dfd2;
+      --surface-tertiary-foreground: #10221c;
+
+      --overlay: #ffffff;
+      --overlay-foreground: #10221c;
+
+      /* A touch darker than the brand neutral (#6B7C75) so muted text
+         reaches AA contrast on the sand background. */
+      --muted: #5a6b64;
+
+      --default: #ede8de;
+      --default-foreground: #10221c;
+
+      --accent: #0e7c5a;
+      --accent-foreground: #ffffff;
+
+      --success: #12b886;
+      --success-foreground: #10221c;
+
+      --danger: #ff6b5c;
+      --danger-foreground: #10221c;
+
+      --border: #e7e2d8;
+      --separator: #d9d3c6;
+      --focus: #0e7c5a;
+      --link: #0a5c43;
+
+      --field-background: #ffffff;
+      --field-foreground: #10221c;
+
+      --surface-shadow: 0 4px 16px rgba(16, 34, 28, 0.08);
+      --overlay-shadow: 0 10px 30px rgba(16, 34, 28, 0.12);
+      --field-shadow: 0 1px 2px rgba(16, 34, 28, 0.04);
     }
 
     @variant dark {
-      --accent: oklch(0.6946 0.1435 164.88);
-      --accent-foreground: oklch(0.234 0.0268 170.56);
+      --background: #10221c;
+      --foreground: #eaf5f0;
 
-      --success: oklch(0.6946 0.1435 164.88);
-      --success-foreground: oklch(0.234 0.0268 170.56);
+      --surface: #16302a;
+      --surface-foreground: #eaf5f0;
 
-      --danger: oklch(0.7091 0.1835 28.37);
-      --danger-foreground: oklch(0.234 0.0268 170.56);
+      --surface-secondary: #1b3a32;
+      --surface-secondary-foreground: #eaf5f0;
+
+      --surface-tertiary: #204439;
+      --surface-tertiary-foreground: #eaf5f0;
+
+      --overlay: #16302a;
+      --overlay-foreground: #eaf5f0;
+
+      --muted: #9db3aa;
+
+      --default: #22423a;
+      --default-foreground: #eaf5f0;
+
+      --accent: #12b886;
+      --accent-foreground: #10221c;
+
+      --success: #12b886;
+      --success-foreground: #10221c;
+
+      --danger: #ff6b5c;
+      --danger-foreground: #10221c;
+
+      --border: #22423a;
+      --separator: #2c5348;
+      --focus: #12b886;
+      --link: #7fd9b8;
+
+      --field-background: #16302a;
+      --field-foreground: #eaf5f0;
+
+      --surface-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+      --overlay-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      --field-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
     }
   }
 }

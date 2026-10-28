@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test"
 
-import { formatAmountInput, parseAmountInput } from "../format"
+import { formatAmountInput, formatMonth, parseAmountInput } from "../format"
+
+describe("formatMonth", () => {
+  it("formats the month in es-AR with a capital letter", () => {
+    expect(formatMonth(new Date(2026, 9, 14).getTime())).toBe("Octubre")
+  })
+})
 
 describe("formatAmountInput", () => {
   it("formats cents as an editable es-AR value", () => {

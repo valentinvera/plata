@@ -13,7 +13,12 @@ export function ThemeToggle() {
 
   return (
     <Pressable
+      accessibilityLabel={
+        isLight ? "Activar el modo oscuro" : "Activar el modo claro"
+      }
+      accessibilityRole="button"
       className="px-2.5"
+      hitSlop={12}
       onPress={() => {
         if (Platform.OS === "ios") {
           impactAsync(ImpactFeedbackStyle.Light)
