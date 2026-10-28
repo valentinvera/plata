@@ -32,6 +32,35 @@ const TRANSACTION_SIGNALS = [
   "transferiste",
 ]
 
+// These messages describe an attempt or a planned movement, not a completed
+// payment. Match status phrases rather than isolated words such as "pendiente",
+// which can legitimately appear in a merchant name.
+const INCOMPLETE_TRANSACTION_PATTERNS = [
+  /\b(?:pago|compra|transferencia|consumo|debito|operacion|suscripcion|ingreso)\s+(?:(?:fue|ha sido|esta)\s+)?(?:rechazad[oa]|cancelad[oa]|anulad[oa]|pendiente|en proceso|programad[oa]|no realizad[oa]|no completad[oa])\b/,
+  /\bno (?:se pudo|pudimos|pudiste)\s+(?:realizar|procesar|completar|hacer|efectuar|debitar|pagar)\b/,
+  /\b(?:rechazamos|cancelamos|anulamos)\s+(?:tu|el|la)\s+(?:pago|compra|transferencia|debito|operacion)\b/,
+]
+
+function isIncompleteTransaction(
+  text: string,
+  merchant: string | null
+): boolean {
+  const normalized = normalizeText(text).replace(/\s+/g, " ")
+  const merchantStart = merchant
+    ? normalized.lastIndexOf(normalizeText(merchant))
+    : -1
+  // A merchant called "Pago Pendiente" is not a pending payment. The parser's
+  // merchant span is context, so inspect the status preceding it instead.
+  const prefix = merchantStart < 0 ? "" : normalized.slice(0, merchantStart)
+  // "En proceso" can resemble a merchant delimiter before any amount. Keep
+  // that status intact; only exclude merchant text following the payment amount.
+  const status =
+    merchantStart >= 0 && parseTransactionText(prefix).amount !== null
+      ? prefix
+      : normalized
+  return INCOMPLETE_TRANSACTION_PATTERNS.some((pattern) => pattern.test(status))
+}
+
 function stringField(value: unknown): string {
   return typeof value === "string" ? value : ""
 }
@@ -117,7 +146,11 @@ export function buildNotificationTransaction(
   const capturedAt = notificationTimestamp(payload) ?? now
   const parsed = parseTransactionText(text, capturedAt)
 
-  if (parsed.amount === null || parsed.amount <= 0) {
+  if (
+    parsed.amount === null ||
+    parsed.amount <= 0 ||
+    isIncompleteTransaction(text, parsed.merchant)
+  ) {
     return null
   }
 

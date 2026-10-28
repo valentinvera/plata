@@ -283,3 +283,71 @@ describe("notification amount currency", () => {
     }
   )
 })
+
+describe("incomplete payment notifications", () => {
+  const base = {
+    app: "com.bank",
+    bigText: "",
+    text: "Importe $500 en SUBE",
+    time: "1700000000000",
+    title: "",
+  }
+
+  it.each([
+    "Pago rechazado",
+    "Tu compra fue rechazada",
+    "Transferencia cancelada",
+    "Tu pago ha sido anulado",
+    "Pago pendiente",
+    "Tu transferencia está pendiente",
+    "Pago en proceso",
+    "Transferencia programada",
+    "Ingreso pendiente",
+    "Débito no realizado",
+    "No pudimos procesar tu pago",
+    "No se pudo completar la transferencia",
+    "No pudiste realizar tu compra",
+    "Rechazamos tu pago",
+    "Cancelamos la transferencia",
+  ])("does not suggest an expense for %s", (title) => {
+    expect(buildNotificationTransaction({ ...base, title })).toBeNull()
+  })
+
+  it("rejects a failure in the expanded body even if the short body looks successful", () => {
+    expect(
+      buildNotificationTransaction({
+        ...base,
+        title: "Pago",
+        text: "Pagaste $500 en SUBE",
+        bigText: "No pudimos procesar tu pago de $500 en SUBE",
+      })
+    ).toBeNull()
+  })
+
+  it("does not let a failed short preview override a completed expanded notification", () => {
+    expect(
+      buildNotificationTransaction({
+        ...base,
+        title: "Pago",
+        text: "Pago pendiente por $500",
+        bigText: "Pagaste $500 en SUBE",
+      })
+    ).toMatchObject({ amount: 50_000, state: "suggested" })
+  })
+
+  it.each([
+    "Pagaste $500 en SUBE",
+    "Compra aprobada por $500 en SUBE",
+    "Transferencia completada por $500 en SUBE",
+    "Recibiste $500 en ACME",
+    "Pagaste $500 en SUBE. Si no realizaste esta compra, contactanos.",
+    "Pagaste $500 en Pendiente Café",
+    "Pagaste $500 en Pago Pendiente Café",
+    "Pagaste $500 en Transferencia Programada",
+  ])("still imports completed payments: %s", (text) => {
+    expect(buildNotificationTransaction({ ...base, text })).toMatchObject({
+      amount: 50_000,
+      state: "suggested",
+    })
+  })
+})

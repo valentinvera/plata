@@ -240,3 +240,42 @@ describe("notification queue delivery", () => {
     }
   )
 })
+
+describe("incomplete notifications in the delivery queue", () => {
+  it("acknowledges rejected and pending attempts without storing transactions", async () => {
+    const { drain, queue, storage } = harness([
+      { ...first, title: "Pago rechazado" },
+      { ...second, title: "Compra pendiente" },
+      { ...first, time: "1700000000002", title: "Transferencia cancelada" },
+    ])
+
+    expect(await drain()).toBe(0)
+    expect(storage.rows.size).toBe(0)
+    expect(queue.acks).toBe(1)
+    expect(queue.pending).toEqual([])
+  })
+
+  it("imports the later completed payment without reviving the earlier attempt on retry", async () => {
+    const completed = { ...second, title: "Compra aprobada" }
+    const { drain, queue, storage } = harness([
+      { ...first, title: "Compra pendiente" },
+      completed,
+    ])
+    queue.failAck = true
+
+    await expect(drain()).rejects.toThrow("Queue unavailable")
+    expect(storage.rows.size).toBe(1)
+    expect(storage.rows.has(notificationTransactionId(completed))).toBe(true)
+    expect(
+      storage.rows.has(
+        notificationTransactionId({ ...first, title: "Compra pendiente" })
+      )
+    ).toBe(false)
+
+    queue.failAck = false
+    expect(await drain()).toBe(0)
+    expect(storage.rows.size).toBe(1)
+    expect(queue.pending).toEqual([])
+    expect(queue.acks).toBe(1)
+  })
+})
