@@ -23,6 +23,7 @@ import {
   updateCategory,
 } from "./category-repository"
 import type { TransactionFilter } from "./filters"
+import { LOCAL_DATA_OPTIONS } from "./local-data-options"
 import type { DateRange } from "./periods"
 import type { Preferences } from "./preferences"
 import { getPreferences, setPreferences } from "./preferences-repository"
@@ -49,6 +50,7 @@ export const transactionsQueryKey = ["transactions"] as const
 
 export function useTransactions() {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: () => listTransactions(),
     queryKey: transactionsQueryKey,
   })
@@ -56,6 +58,7 @@ export function useTransactions() {
 
 export function useAllTransactions() {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: listAllTransactions,
     queryKey: [...transactionsQueryKey, "all"],
   })
@@ -63,6 +66,7 @@ export function useAllTransactions() {
 
 export function useLastLoggedTime() {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: getLastLoggedTime,
     queryKey: [...transactionsQueryKey, "last"],
   })
@@ -70,6 +74,7 @@ export function useLastLoggedTime() {
 
 export function useSuggestedTransactions(accountFilter: string) {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: () => listTransactionsByState("suggested", accountFilter),
     queryKey: [...transactionsQueryKey, "state", "suggested", accountFilter],
   })
@@ -77,6 +82,7 @@ export function useSuggestedTransactions(accountFilter: string) {
 
 export function useConfirmedTransactions(accountFilter: string) {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: () => listTransactionsByState("confirmed", accountFilter),
     queryKey: [...transactionsQueryKey, "state", "confirmed", accountFilter],
   })
@@ -84,6 +90,7 @@ export function useConfirmedTransactions(accountFilter: string) {
 
 export function useTransactionsInRange(range: DateRange) {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: () => listTransactionsInRange(range.start, range.end),
     queryKey: [...transactionsQueryKey, "range", range.start, range.end],
   })
@@ -93,6 +100,7 @@ export const SEARCH_PAGE_SIZE = 100
 
 export function useFilteredTransactions(filter: TransactionFilter) {
   return useInfiniteQuery({
+    ...LOCAL_DATA_OPTIONS,
     getNextPageParam: (lastPage: Transaction[], pages: Transaction[][]) =>
       lastPage.length < SEARCH_PAGE_SIZE
         ? undefined
@@ -111,6 +119,7 @@ export function useCreateTransaction() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: NewTransaction) => createTransaction(input),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
@@ -121,6 +130,7 @@ export function useCreateTransactions() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (inputs: NewTransaction[]) => createTransactions(inputs),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
@@ -131,6 +141,7 @@ export function useUpdateTransactionState() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: { id: string; state: TransactionState }) =>
       updateTransactionState(input.id, input.state),
     onSuccess: () =>
@@ -140,6 +151,7 @@ export function useUpdateTransactionState() {
 
 export function useTransaction(id: string) {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: () => getTransaction(id),
     queryKey: [...transactionsQueryKey, "id", id],
   })
@@ -149,6 +161,7 @@ export function useUpdateTransaction() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: { id: string; update: TransactionUpdate }) =>
       updateTransaction(input.id, input.update),
     onSuccess: () =>
@@ -160,6 +173,7 @@ export function useDeleteTransaction() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (id: string) => deleteTransaction(id),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
@@ -170,6 +184,7 @@ export function useDeleteTransactions() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (ids: string[]) => deleteTransactions(ids),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: transactionsQueryKey }),
@@ -180,6 +195,7 @@ export function useUpdateTransactionsState() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: { ids: string[]; state: TransactionState }) =>
       updateTransactionsState(input.ids, input.state),
     onSuccess: () =>
@@ -190,13 +206,18 @@ export function useUpdateTransactionsState() {
 export const budgetsQueryKey = ["budgets"] as const
 
 export function useBudgets() {
-  return useQuery({ queryFn: listBudgets, queryKey: budgetsQueryKey })
+  return useQuery({
+    ...LOCAL_DATA_OPTIONS,
+    queryFn: listBudgets,
+    queryKey: budgetsQueryKey,
+  })
 }
 
 export function useSetBudget() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: { amount: number; categoryId: string }) =>
       setBudget(input.categoryId, input.amount),
     onSuccess: () =>
@@ -207,13 +228,18 @@ export function useSetBudget() {
 export const accountsQueryKey = ["accounts"] as const
 
 export function useAccounts() {
-  return useQuery({ queryFn: listAccounts, queryKey: accountsQueryKey })
+  return useQuery({
+    ...LOCAL_DATA_OPTIONS,
+    queryFn: listAccounts,
+    queryKey: accountsQueryKey,
+  })
 }
 
 export function useCreateAccount() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: AccountInput) => createAccount(input),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: accountsQueryKey }),
@@ -224,6 +250,7 @@ export function useUpdateAccount() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: { id: string; update: Partial<AccountInput> }) =>
       updateAccount(input.id, input.update),
     onSuccess: () =>
@@ -235,6 +262,7 @@ export function useDeleteAccount() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (id: string) => deleteAccount(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: accountsQueryKey })
@@ -246,11 +274,16 @@ export function useDeleteAccount() {
 export const categoriesQueryKey = ["categories"] as const
 
 export function useCategories() {
-  return useQuery({ queryFn: listCategories, queryKey: categoriesQueryKey })
+  return useQuery({
+    ...LOCAL_DATA_OPTIONS,
+    queryFn: listCategories,
+    queryKey: categoriesQueryKey,
+  })
 }
 
 export function useCustomCategories() {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: listCustomCategories,
     queryKey: [...categoriesQueryKey, "custom"],
   })
@@ -260,6 +293,7 @@ export function useCreateCategory() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: CategoryInput) => createCategory(input),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey }),
@@ -270,6 +304,7 @@ export function useUpdateCategory() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: { id: string; update: Partial<CategoryInput> }) =>
       updateCategory(input.id, input.update),
     onSuccess: () =>
@@ -281,6 +316,7 @@ export function useDeleteCategory() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (id: string) => deleteCategory(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: categoriesQueryKey })
@@ -294,6 +330,7 @@ export const appMetaQueryKey = ["app-meta"] as const
 
 export function useAppMeta(key: string) {
   return useQuery({
+    ...LOCAL_DATA_OPTIONS,
     queryFn: () => getAppMeta(key),
     queryKey: [...appMetaQueryKey, key],
   })
@@ -303,6 +340,7 @@ export function useSetAppMeta() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (input: { key: string; value: string }) =>
       setAppMeta(input.key, input.value),
     onSuccess: () =>
@@ -313,13 +351,18 @@ export function useSetAppMeta() {
 export const preferencesQueryKey = ["preferences"] as const
 
 export function usePreferences() {
-  return useQuery({ queryFn: getPreferences, queryKey: preferencesQueryKey })
+  return useQuery({
+    ...LOCAL_DATA_OPTIONS,
+    queryFn: getPreferences,
+    queryKey: preferencesQueryKey,
+  })
 }
 
 export function useSetPreferences() {
   const queryClient = useQueryClient()
 
   return useMutation({
+    ...LOCAL_DATA_OPTIONS,
     mutationFn: (update: Partial<Preferences>) => setPreferences(update),
     onSuccess: () =>
       queryClient.invalidateQueries({ queryKey: preferencesQueryKey }),
