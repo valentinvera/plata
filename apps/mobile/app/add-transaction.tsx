@@ -18,9 +18,11 @@ import {
   useAccounts,
   useCategories,
   useCreateTransaction,
+  usePreferences,
 } from "@/src/features/transactions/hooks"
 import { recognizeTransactionText } from "@/src/features/transactions/ocr-recognize"
 import { parseTransactionText } from "@/src/features/transactions/parser"
+import { resolveInputAccountId } from "@/src/features/transactions/preferences"
 import type { TransactionState } from "@/src/features/transactions/types"
 
 export default function AddTransactionScreen() {
@@ -35,10 +37,15 @@ export default function AddTransactionScreen() {
   const createTransaction = useCreateTransaction()
   const { data: accountsData } = useAccounts()
   const { data: categoriesData } = useCategories()
+  const { data: preferences, isError: preferencesError } = usePreferences()
 
   const accounts = accountsData ?? []
   const categories = categoriesData ?? DEFAULT_CATEGORIES
-  const selectedAccountId = accountId ?? accounts[0]?.id ?? null
+  const selectedAccountId = resolveInputAccountId(
+    accountId,
+    preferences,
+    accounts
+  )
 
   const preview = useMemo(() => {
     const parsed = parseTransactionText(text)
@@ -54,8 +61,8 @@ export default function AddTransactionScreen() {
     }
   }, [categories, categoryOverride, text])
 
-  // Accounts load asynchronously; require a resolved account so a transaction is
-  // never stored without one (e.g. saving right after a share intent cold open).
+  // Accounts and preferences load asynchronously. A manual choice can proceed
+  // immediately; automatic selection waits for the saved preference to resolve.
   const canSave =
     preview.amount !== null &&
     preview.amount > 0 &&
@@ -204,10 +211,29 @@ export default function AddTransactionScreen() {
       </Card>
 
       <View className="mt-4">
-        <Text className="mb-2 text-muted text-sm">Account</Text>
-        <View className="flex-row flex-wrap gap-2">
+        <Text className="mb-2 text-muted text-sm">Medio de pago</Text>
+        {!selectedAccountId && preferences === undefined ? (
+          <Text
+            accessibilityLiveRegion="polite"
+            className="mb-2 text-muted text-sm"
+          >
+            {preferencesError
+              ? "No pudimos cargar tu medio predeterminado. Elegí uno para continuar."
+              : "Cargando tu medio predeterminado…"}
+          </Text>
+        ) : null}
+        <View
+          accessibilityLabel="Medio de pago"
+          className="flex-row flex-wrap gap-2"
+        >
           {accounts.map((account) => (
             <Chip
+              accessibilityRole="button"
+              accessibilityState={{
+                selected: selectedAccountId === account.id,
+              }}
+              aria-pressed={selectedAccountId === account.id}
+              className="min-h-11"
               key={account.id}
               onPress={() => setAccountId(account.id)}
               variant={selectedAccountId === account.id ? "primary" : "soft"}
