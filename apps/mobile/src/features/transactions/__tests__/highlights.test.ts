@@ -96,3 +96,26 @@ describe("computeHighlights", () => {
     expect(highlights.duplicates).toBeGreaterThanOrEqual(1)
   })
 })
+
+describe("recurring payments with repeated notification text", () => {
+  it("does not show a duplicate warning for distinct monthly payments", () => {
+    const recent = [0, 1, 2].map((month) =>
+      makeTransaction({
+        id: `payment-${month}`,
+        merchant: "Gym",
+        rawRef: "Pagaste $50 en Gym",
+        occurredAt: new Date(2026, month, 15, 12).getTime(),
+      })
+    )
+    const highlights = computeHighlights({
+      currency: "ARS",
+      current: recent.slice(2),
+      previous: recent.slice(1, 2),
+      recent,
+    })
+
+    expect(highlights.monthExpense).toBe(5000)
+    expect(highlights.recurring).toBe(1)
+    expect(highlights.duplicates).toBe(0)
+  })
+})
