@@ -9,6 +9,7 @@ import {
   parsePreferences,
   preferredAccountKind,
   resolveDefaultAccountId,
+  resolveInputAccountId,
   serializePreferences,
 } from "../preferences"
 
@@ -125,5 +126,79 @@ describe("resolveDefaultAccountId", () => {
         []
       )
     ).toBeNull()
+  })
+})
+
+describe("resolveInputAccountId", () => {
+  const cardDefault = { ...DEFAULT_PREFERENCES, defaultAccountId: "card" }
+
+  it("uses the saved default instead of the first account", () => {
+    expect(resolveInputAccountId(null, cardDefault, ACCOUNTS)).toBe("card")
+  })
+
+  it("uses the most-used payment kind without an explicit default", () => {
+    expect(
+      resolveInputAccountId(
+        null,
+        {
+          ...DEFAULT_PREFERENCES,
+          paymentMix: { cash: 0, card: 1, transfer: 5 },
+        },
+        ACCOUNTS
+      )
+    ).toBe("transfer")
+  })
+
+  it("prefers a manual choice over the saved default", () => {
+    expect(resolveInputAccountId("cash", cardDefault, ACCOUNTS)).toBe("cash")
+  })
+
+  it("allows a valid manual choice while preferences are unavailable", () => {
+    expect(resolveInputAccountId("card", undefined, ACCOUNTS)).toBe("card")
+  })
+
+  it("does not choose a fallback account before preferences finish loading", () => {
+    expect(resolveInputAccountId(null, undefined, ACCOUNTS)).toBeNull()
+  })
+
+  it("falls back to the first account only after empty preferences are loaded", () => {
+    expect(resolveInputAccountId(null, DEFAULT_PREFERENCES, ACCOUNTS)).toBe(
+      "cash"
+    )
+  })
+
+  it("ignores a deleted manual choice and resolves the saved default", () => {
+    expect(resolveInputAccountId("deleted", cardDefault, ACCOUNTS)).toBe("card")
+    expect(resolveInputAccountId("deleted", undefined, ACCOUNTS)).toBeNull()
+  })
+
+  it("ignores a stale stored default and uses the payment mix", () => {
+    expect(
+      resolveInputAccountId(
+        null,
+        {
+          ...DEFAULT_PREFERENCES,
+          defaultAccountId: "deleted",
+          paymentMix: { cash: 0, card: 0, transfer: 1 },
+        },
+        ACCOUNTS
+      )
+    ).toBe("transfer")
+  })
+
+  it("keeps an explicit choice after preferences refresh", () => {
+    expect(resolveInputAccountId("cash", cardDefault, ACCOUNTS)).toBe("cash")
+    expect(
+      resolveInputAccountId(
+        "cash",
+        { ...cardDefault, defaultAccountId: "transfer" },
+        ACCOUNTS
+      )
+    ).toBe("cash")
+  })
+
+  it("waits for an available account even when a manual id is present", () => {
+    expect(resolveInputAccountId("card", cardDefault, [])).toBeNull()
+    expect(resolveInputAccountId(null, DEFAULT_PREFERENCES, [])).toBeNull()
   })
 })
