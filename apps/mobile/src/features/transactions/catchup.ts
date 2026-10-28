@@ -1,6 +1,7 @@
 import { DEFAULT_CATEGORIES } from "./categories"
 import { categorize } from "./categorizer"
 import { createId } from "./id"
+import { selectTransactionText } from "./ocr"
 import { parseTransactionText } from "./parser"
 import type { Category, Currency, TransactionKind } from "./types"
 
@@ -44,7 +45,10 @@ export function buildCatchUpSuggestions(
       continue
     }
 
-    const parsed = parseTransactionText(text, now)
+    // Keep rejected lines in the preview count, but never let a balance or
+    // credit limit become a transaction when the batch is confirmed.
+    const candidate = selectTransactionText(text)
+    const parsed = parseTransactionText(candidate ?? "", now)
     const categorization = categorize(
       `${text} ${parsed.merchant ?? ""}`,
       categories
