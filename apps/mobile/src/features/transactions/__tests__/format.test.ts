@@ -1,6 +1,12 @@
 import { describe, expect, it } from "bun:test"
 
-import { formatAmountInput, formatMonth, parseAmountInput } from "../format"
+import {
+  formatAmountInput,
+  formatDateInput,
+  formatMonth,
+  parseAmountInput,
+  parseDateInput,
+} from "../format"
 
 describe("formatMonth", () => {
   it("formats the month in es-AR with a capital letter", () => {
@@ -46,5 +52,53 @@ describe("parseAmountInput", () => {
     expect(parseAmountInput("90071992547409,90")).toBe(9_007_199_254_740_990)
     expect(parseAmountInput("90071992547409,92")).toBeNull()
     expect(parseAmountInput("90071992547409,93")).toBeNull()
+  })
+})
+
+describe("transaction date input", () => {
+  it("formats the local calendar day with an explicit year", () => {
+    expect(formatDateInput(new Date(2026, 8, 5, 0, 15).getTime())).toBe(
+      "05/09/2026"
+    )
+    expect(formatDateInput(new Date(2026, 11, 31, 23, 45).getTime())).toBe(
+      "31/12/2026"
+    )
+  })
+
+  it("accepts valid dates and normalizes corrections to local noon", () => {
+    expect(parseDateInput("5/9/2026")).toBe(new Date(2026, 8, 5, 12).getTime())
+    expect(parseDateInput(" 29/02/2024 ")).toBe(
+      new Date(2024, 1, 29, 12).getTime()
+    )
+  })
+
+  it.each([
+    "",
+    "05/09",
+    "05/09/26",
+    "2026-09-05",
+    "31/02/2026",
+    "29/02/2026",
+    "31/04/2026",
+    "00/09/2026",
+    "01/00/2026",
+    "01/13/2026",
+    "01/01/0000",
+    "05/09/2026abc",
+  ])("rejects invalid or incomplete input: %s", (value) => {
+    expect(parseDateInput(value)).toBeNull()
+  })
+
+  it("preserves the original timestamp when the calendar date is unchanged", () => {
+    const original = new Date(2026, 8, 5, 23, 47, 16, 321).getTime()
+    expect(parseDateInput("5/9/2026", original)).toBe(original)
+    expect(parseDateInput(formatDateInput(original), original)).toBe(original)
+  })
+
+  it("moves corrections into the selected month rather than today's month", () => {
+    const original = new Date(2026, 9, 28, 8, 35).getTime()
+    expect(parseDateInput("30/09/2026", original)).toBe(
+      new Date(2026, 8, 30, 12).getTime()
+    )
   })
 })

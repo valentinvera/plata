@@ -1,5 +1,13 @@
 import { router, useLocalSearchParams } from "expo-router"
-import { Button, Chip, Input, Label, Spinner, TextField } from "heroui-native"
+import {
+  Button,
+  Chip,
+  FieldError,
+  Input,
+  Label,
+  Spinner,
+  TextField,
+} from "heroui-native"
 import { useCallback, useState } from "react"
 import { ScrollView, Text, View } from "react-native"
 
@@ -10,7 +18,9 @@ import {
 } from "@/src/features/transactions/categories"
 import {
   formatAmountInput,
+  formatDateInput,
   parseAmountInput,
+  parseDateInput,
 } from "@/src/features/transactions/format"
 import {
   useAccounts,
@@ -53,6 +63,10 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
   const [amountInput, setAmountInput] = useState(
     formatAmountInput(transaction.amount)
   )
+  const [dateInput, setDateInput] = useState(
+    formatDateInput(transaction.occurredAt)
+  )
+  const [dateTouched, setDateTouched] = useState(false)
   const [merchant, setMerchant] = useState(transaction.merchant ?? "")
   const [categoryId, setCategoryId] = useState(transaction.categoryId)
   const [accountId, setAccountId] = useState(transaction.accountId)
@@ -65,11 +79,14 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
   const remove = useDeleteTransaction()
 
   const amount = parseAmountInput(amountInput)
+  const occurredAt = parseDateInput(dateInput, transaction.occurredAt)
+  const isDateInvalid = dateTouched && occurredAt === null
   const isBusy = update.isPending || remove.isPending
-  const canSave = amount !== null && amount > 0 && !isBusy
+  const canSave =
+    amount !== null && amount > 0 && occurredAt !== null && !isBusy
 
   const handleSave = useCallback(async () => {
-    if (amount === null || amount <= 0) {
+    if (amount === null || amount <= 0 || occurredAt === null) {
       return
     }
 
@@ -82,13 +99,22 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
           amount,
           categoryId,
           merchant: merchant.trim() || null,
+          occurredAt,
         },
       })
       router.back()
     } catch {
       setError("Could not save the changes. Please try again.")
     }
-  }, [accountId, amount, categoryId, merchant, transaction.id, update])
+  }, [
+    accountId,
+    amount,
+    categoryId,
+    merchant,
+    occurredAt,
+    transaction.id,
+    update,
+  ])
 
   const handleDelete = useCallback(async () => {
     setError(null)
@@ -115,6 +141,28 @@ function TransactionForm({ transaction }: { transaction: Transaction }) {
           value={amountInput}
         />
       </TextField>
+
+      <View className="mt-4">
+        <TextField isDisabled={isBusy} isInvalid={isDateInvalid}>
+          <Label>Fecha del movimiento</Label>
+          <Input
+            accessibilityHint="Ingresá día, mes y año separados por barras."
+            accessibilityLabel="Fecha del movimiento"
+            autoCapitalize="none"
+            autoCorrect={false}
+            onBlur={() => setDateTouched(true)}
+            onChangeText={setDateInput}
+            placeholder="DD/MM/AAAA"
+            value={dateInput}
+          />
+          <Text className="text-muted text-xs">
+            Día/mes/año, por ejemplo 05/09/2026.
+          </Text>
+          <FieldError accessibilityLiveRegion="polite">
+            Ingresá una fecha válida en formato DD/MM/AAAA.
+          </FieldError>
+        </TextField>
+      </View>
 
       <View className="mt-4">
         <TextField>

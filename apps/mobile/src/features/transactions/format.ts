@@ -62,3 +62,50 @@ export function parseAmountInput(value: string): number | null {
 
   return Number.isSafeInteger(cents) ? cents : null
 }
+
+export function formatDateInput(timestamp: number): string {
+  const date = new Date(timestamp)
+  const day = String(date.getDate()).padStart(2, "0")
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const year = String(date.getFullYear()).padStart(4, "0")
+  return `${day}/${month}/${year}`
+}
+
+const DATE_INPUT_REGEX = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/
+
+// Date-only corrections use local noon, like imported transaction dates. Keep
+// the exact original time when the user saves without changing the calendar day.
+export function parseDateInput(
+  value: string,
+  originalTimestamp?: number
+): number | null {
+  const match = value.trim().match(DATE_INPUT_REGEX)
+  if (!match) {
+    return null
+  }
+  const day = Number(match[1])
+  const month = Number(match[2])
+  const year = Number(match[3])
+  if (year < 1 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return null
+  }
+
+  const date = new Date(0)
+  date.setHours(12, 0, 0, 0)
+  date.setFullYear(year, month - 1, day)
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null
+  }
+
+  if (
+    originalTimestamp !== undefined &&
+    formatDateInput(originalTimestamp) === formatDateInput(date.getTime())
+  ) {
+    return originalTimestamp
+  }
+  return date.getTime()
+}
