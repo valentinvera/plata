@@ -261,3 +261,25 @@ describe("notification amount validation", () => {
     })
   })
 })
+
+describe("notification amount currency", () => {
+  it.each([
+    ["Pagaste ARS $500 en SUBE. Saldo USD $100", "ARS", 50_000],
+    ["Pagaste $500 en USDT MARKET", "ARS", 50_000],
+    ["Cobraste USD $100 en ACME. Saldo ARS $500", "USD", 10_000],
+    ["Cobraste $100 dólares en ACME", "USD", 10_000],
+  ])(
+    "preserves the selected payment currency: %s",
+    (text, currency, amount) => {
+      expect(
+        buildNotificationTransaction({
+          app: "com.bank",
+          bigText: "",
+          text: String(text),
+          time: "1700000000000",
+          title: "Pago",
+        })
+      ).toMatchObject({ amount, currency, state: "suggested" })
+    }
+  )
+})
