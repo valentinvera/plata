@@ -1,4 +1,5 @@
 const DIACRITICS = /[\u0300-\u036f]/g
+const WHITESPACE = /\s+/g
 const REGEX_SPECIALS = /[.*+?^${}()|[\]\\]/g
 
 const keywordRegexCache = new Map<string, RegExp>()
@@ -16,7 +17,12 @@ function keywordRegex(keyword: string): RegExp {
 }
 
 export function normalizeText(text: string): string {
-  return text.normalize("NFD").replace(DIACRITICS, "").toLowerCase().trim()
+  return text
+    .normalize("NFD")
+    .replace(DIACRITICS, "")
+    .replace(WHITESPACE, " ")
+    .toLowerCase()
+    .trim()
 }
 
 export function containsKeyword(normalized: string, keyword: string): boolean {
