@@ -1,3 +1,4 @@
+import { startOfDay } from "./periods"
 import { normalizeText } from "./text"
 import type { Transaction } from "./types"
 
@@ -41,24 +42,64 @@ function groupKey(transaction: Transaction): string | null {
   return `${transaction.currency}|${transaction.kind}|${transaction.amount}|${merchant}`
 }
 
-// Two transactions are candidates for the same event when they share an
-// identical raw input, or when both carry a precise timestamp within the
-// window. Day-coarse timestamps fall back to the raw-input signal because the
-// short window cannot discriminate them.
+// Precise timestamps must stay within the short event window, even if a bank
+// reuses the same notification text. When either timestamp is date-only, require
+// matching nonblank input on the same local calendar day instead.
 function isSameEvent(
   previous: Transaction,
   current: Transaction,
   windowMs: number
 ): boolean {
-  if (previous.rawRef !== null && previous.rawRef === current.rawRef) {
-    return true
-  }
-
   if (isDayCoarse(previous.occurredAt) || isDayCoarse(current.occurredAt)) {
-    return false
+    return (
+      Boolean(previous.rawRef?.trim()) &&
+      previous.rawRef === current.rawRef &&
+      startOfDay(previous.occurredAt) === startOfDay(current.occurredAt)
+    )
   }
 
   return current.occurredAt - previous.occurredAt <= windowMs
+}
+
+function getPreciseTransaction(
+  transaction: Transaction
+): Transaction | undefined {
+  return isDayCoarse(transaction.occurredAt) ? undefined : transaction
+}
+
+function findEventClusters(
+  transactions: readonly Transaction[],
+  windowMs: number
+): Transaction[][] {
+  const ordered = [...transactions].sort((a, b) => a.occurredAt - b.occurredAt)
+  const clusters: Transaction[][] = []
+  let cluster: Transaction[] = [ordered[0]]
+  let firstPrecise = getPreciseTransaction(ordered[0])
+
+  for (let index = 1; index < ordered.length; index += 1) {
+    const previous = ordered[index - 1]
+    const current = ordered[index]
+    // A chain of short gaps, or a date-only copy between precise timestamps,
+    // must not stretch one event over a much longer period.
+    const matchesFirstPrecise =
+      !firstPrecise || isSameEvent(firstPrecise, current, windowMs)
+    if (matchesFirstPrecise && isSameEvent(previous, current, windowMs)) {
+      cluster.push(current)
+      firstPrecise ??= getPreciseTransaction(current)
+      continue
+    }
+
+    if (cluster.length >= 2) {
+      clusters.push(cluster)
+    }
+    cluster = [current]
+    firstPrecise = getPreciseTransaction(current)
+  }
+
+  if (cluster.length >= 2) {
+    clusters.push(cluster)
+  }
+  return clusters
 }
 
 // Groups transactions that look like the same event: same amount, currency,
@@ -92,25 +133,7 @@ export function findDuplicateGroups(
       continue
     }
 
-    const ordered = [...bucket].sort((a, b) => a.occurredAt - b.occurredAt)
-    let cluster: Transaction[] = [ordered[0]]
-
-    for (let index = 1; index < ordered.length; index += 1) {
-      const previous = ordered[index - 1]
-      const current = ordered[index]
-
-      if (isSameEvent(previous, current, windowMs)) {
-        cluster.push(current)
-      } else {
-        if (cluster.length >= 2) {
-          groups.push({ key, transactions: cluster })
-        }
-
-        cluster = [current]
-      }
-    }
-
-    if (cluster.length >= 2) {
+    for (const cluster of findEventClusters(bucket, windowMs)) {
       groups.push({ key, transactions: cluster })
     }
   }
