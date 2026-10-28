@@ -150,3 +150,23 @@ describe("catch-up from selected OCR text", () => {
     expect(suggestion && isSuggestionValid(suggestion)).toBe(true)
   })
 })
+
+describe("catch-up amount currency", () => {
+  it("keeps merchant currency-like names out of the currency selection", () => {
+    const valid = buildCatchUpSuggestions([
+      "Pagaste ARS $500 en USD STORE",
+      "Pagaste $500 en USDT MARKET",
+      "Cobraste USD $100 en ACME",
+      "Cobraste $100 dólares en ACME",
+    ]).filter(isSuggestionValid)
+
+    expect(valid.map(({ amount, currency }) => ({ amount, currency }))).toEqual(
+      [
+        { amount: 50_000, currency: "ARS" },
+        { amount: 50_000, currency: "ARS" },
+        { amount: 10_000, currency: "USD" },
+        { amount: 10_000, currency: "USD" },
+      ]
+    )
+  })
+})

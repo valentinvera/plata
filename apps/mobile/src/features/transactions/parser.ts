@@ -11,14 +11,16 @@ const INCOME_KEYWORDS = [
   "sueldo",
 ]
 
-const USD_KEYWORDS = ["dolares", "usd", "u$s", "us$"]
-
 // Leap-day occurrences can be eight years apart around a non-leap century.
 const MAX_DATE_YEAR_LOOKBACK = 8
 
 const DATE_REGEX = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/
 const MERCHANT_REGEX = /\ben\s+(.+?)(?=\s+(?:el|del|por)\s+(?:\d|\$)|\s+\$|$)/i
-const CURRENCY_AMOUNT_REGEX = /(?:\b(?:ARS|USD)|u\$s|us\$|\$)\s*(\d\S*)/i
+const CURRENCY_AMOUNT_REGEX =
+  /(\b(?:ARS|USD|d[oó]lares|pesos)\b\s*\$?|\b(?:u\$s|us\$)|\$)\s*(\d\S*)/i
+const ADJACENT_CURRENCY_SUFFIX =
+  /^\s+(USD\b|ARS\b|u\$s\b|us\$|d[oó]lares\b|pesos\b)/i
+const USD_MARKER = /^(?:usd\b|u\$s|us\$|dolares\b)/
 const PLAIN_AMOUNT_REGEX = /\b(\d[\d.,]*[.,]\d[\d.,]*)(?![\w.,])/
 const CURRENCY_PREFIX = /^(?:ARS|USD|u\$s|us\$|\$)\s*/i
 const CURRENCY_SUFFIX = /\s*(?:ARS|USD|u\$s|us\$|\$)$/i
@@ -47,19 +49,39 @@ export function parseAmountToCents(raw: string): number | null {
   return Number.isSafeInteger(cents) ? cents : null
 }
 
-function extractAmountToken(text: string): string | null {
-  const token =
-    text.match(CURRENCY_AMOUNT_REGEX)?.[1] ??
-    text.match(PLAIN_AMOUNT_REGEX)?.[1]
-  // Sentence punctuation belongs to the message, not the numeric amount. Keep
-  // the rest of the token intact so malformed grouping is rejected as a whole.
-  return token?.replace(TRAILING_AMOUNT_PUNCTUATION, "") ?? null
+interface ExtractedAmount {
+  currency: Currency
+  token: string
 }
 
-function detectCurrency(normalized: string): Currency {
-  return USD_KEYWORDS.some((keyword) => normalized.includes(keyword))
-    ? "USD"
-    : "ARS"
+function amountCurrency(prefix: string | undefined, suffix: string): Currency {
+  // An explicit prefix belongs to this amount and wins over other currency
+  // mentions. A generic "$" or an unmarked decimal can use an adjacent suffix.
+  const marker =
+    prefix && prefix.trim() !== "$"
+      ? prefix
+      : (suffix.match(ADJACENT_CURRENCY_SUFFIX)?.[1] ?? "")
+  return USD_MARKER.test(normalizeText(marker)) ? "USD" : "ARS"
+}
+
+function extractAmount(text: string): ExtractedAmount | null {
+  const prefixed = text.match(CURRENCY_AMOUNT_REGEX)
+  const match = prefixed ?? text.match(PLAIN_AMOUNT_REGEX)
+  const token = prefixed ? prefixed[2] : match?.[1]
+  if (!(match && token)) {
+    return null
+  }
+
+  // Sentence punctuation ends the amount's context: a following USD balance
+  // must not become a currency suffix for the payment that just ended.
+  const cleanToken = token.replace(TRAILING_AMOUNT_PUNCTUATION, "")
+  const suffix =
+    cleanToken === token ? text.slice((match.index ?? 0) + match[0].length) : ""
+  return {
+    currency: amountCurrency(prefixed?.[1], suffix),
+    // Keep malformed grouping intact so it cannot become a valid prefix.
+    token: cleanToken,
+  }
 }
 
 function detectKind(normalized: string): TransactionKind {
@@ -133,11 +155,11 @@ export function parseTransactionText(
   now: number = Date.now()
 ): ParsedTransaction {
   const normalized = normalizeText(text)
-  const amountToken = extractAmountToken(text)
+  const extracted = extractAmount(text)
 
   return {
-    amount: amountToken ? parseAmountToCents(amountToken) : null,
-    currency: detectCurrency(normalized),
+    amount: extracted ? parseAmountToCents(extracted.token) : null,
+    currency: extracted?.currency ?? "ARS",
     kind: detectKind(normalized),
     merchant: detectMerchant(text),
     occurredAt: parseDate(text, now),

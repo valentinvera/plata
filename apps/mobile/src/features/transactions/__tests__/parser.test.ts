@@ -207,3 +207,41 @@ describe("exact imported monetary amounts", () => {
     }
   )
 })
+
+describe("currency belonging to the imported amount", () => {
+  it.each([
+    ["Pagaste ARS 500 en SUBE. Saldo USD 100", 50_000, "ARS"],
+    ["Pagaste ARS $500 en SUBE. Saldo USD $100", 50_000, "ARS"],
+    ["Pagaste $500 en SUBE. Saldo USD 100", 50_000, "ARS"],
+    ["Pagaste $500 en USD STORE", 50_000, "ARS"],
+    ["Pagaste $500. USD disponible 100", 50_000, "ARS"],
+    ["Cobraste usd $100 en ACME", 10_000, "USD"],
+    ["Cobraste dólares $100 en ACME", 10_000, "USD"],
+    ["Cobraste dolares 100,50 en ACME", 10_050, "USD"],
+    ["Pagaste $500 en USDT MARKET", 50_000, "ARS"],
+    ["Pagaste 500,50 en USD STORE", 50_050, "ARS"],
+    ["Cobraste USD $100 en ACME. Saldo ARS $500", 10_000, "USD"],
+    ["Cobraste U$S 100 en ACME", 10_000, "USD"],
+    ["Cobraste US$ 100 en ACME", 10_000, "USD"],
+    ["Cobraste $100 USD en ACME", 10_000, "USD"],
+    ["Cobraste $100 dólares en ACME", 10_000, "USD"],
+    ["Cobraste 100,50 USD en ACME", 10_050, "USD"],
+    ["Pagaste $500 pesos en SUBE", 50_000, "ARS"],
+    ["Pagaste ARS 500 USD en ACME", 50_000, "ARS"],
+  ])("uses the marker of the selected amount: %s", (text, amount, currency) => {
+    expect(parseTransactionText(String(text))).toMatchObject({
+      amount,
+      currency,
+    })
+  })
+
+  it("does not treat a longer currency-like word as a marker", () => {
+    expect(
+      parseTransactionText("Cobraste $100 USDToken en ACME")
+    ).toMatchObject({
+      amount: 10_000,
+      currency: "ARS",
+    })
+    expect(parseTransactionText("Pagaste USDT 100 en ACME").amount).toBeNull()
+  })
+})
