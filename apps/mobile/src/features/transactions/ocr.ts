@@ -18,11 +18,22 @@ function isNonTransactionLine(line: string): boolean {
   )
 }
 
+// Context breaks ties, but can never outweigh a payment signal or amount.
+const CONTEXT_WEIGHT = 0.25
+const BARE_DATE_LINE = /^\d{1,2}\/\d{1,2}(?:\/\d{2,4})?$/
+
 function score(text: string): number {
   let value = 0
+  const parsed = parseTransactionText(text)
 
-  if (parseTransactionText(text).amount !== null) {
+  if (parsed.amount !== null) {
     value += 1
+    if (parsed.merchant !== null) {
+      value += CONTEXT_WEIGHT
+    }
+    if (parsed.occurredAt !== null) {
+      value += CONTEXT_WEIGHT
+    }
   }
 
   if (hasTransactionSignal(text)) {
@@ -34,7 +45,7 @@ function score(text: string): number {
 
 // OCR returns every line on the screenshot. Score single lines and adjacent
 // pairs (a payment label and its amount often sit on separate lines), skipping
-// balance lines, and pick the best-scoring candidate.
+// balance lines, and prefer candidates that retain their merchant and date.
 export function selectTransactionText(ocrText: string): string | null {
   const lines = ocrText
     .split("\n")
@@ -55,9 +66,24 @@ export function selectTransactionText(ocrText: string): string | null {
     candidates.push(line)
 
     const next = lines[index + 1]
-    if (next && !isNonTransactionLine(next)) {
-      candidates.push(`${line} ${next}`)
+    if (!next || isNonTransactionLine(next)) {
+      continue
     }
+
+    // Adjacent complete payments belong to different candidates. Combining
+    // them could attach the second payment's merchant/date to the first amount.
+    const bothHaveAmounts =
+      parseTransactionText(line).amount !== null &&
+      parseTransactionText(next).amount !== null
+    const bothHaveSignals =
+      hasTransactionSignal(line) && hasTransactionSignal(next)
+    if (bothHaveAmounts || bothHaveSignals) {
+      continue
+    }
+
+    // A date printed below the merchant is context, not part of its name.
+    const continuation = BARE_DATE_LINE.test(next) ? `el ${next}` : next
+    candidates.push(`${line} ${continuation}`)
   }
 
   let best: { score: number; text: string } | null = null

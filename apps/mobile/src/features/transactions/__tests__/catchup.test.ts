@@ -1,10 +1,10 @@
 import { describe, expect, it } from "bun:test"
-
 import {
   buildCatchUpSuggestions,
   isSuggestionValid,
   splitCatchUpTexts,
 } from "../catchup"
+import { selectTransactionText } from "../ocr"
 
 describe("splitCatchUpTexts", () => {
   it("splits, trims and drops empty lines", () => {
@@ -132,5 +132,21 @@ describe("catch-up amount validation", () => {
         { amount: 50_000, currency: "USD" },
       ]
     )
+  })
+})
+
+describe("catch-up from selected OCR text", () => {
+  it("retains the adjacent receipt date through categorization and confirmation validation", () => {
+    const text = selectTransactionText("Pagaste $500 en SUBE\n05/09/2026")
+    const [suggestion] = buildCatchUpSuggestions(text ? [text] : [])
+
+    expect(suggestion).toMatchObject({
+      amount: 50_000,
+      categoryId: "transport",
+      currency: "ARS",
+      merchant: "SUBE",
+      occurredAt: new Date(2026, 8, 5, 12).getTime(),
+    })
+    expect(suggestion && isSuggestionValid(suggestion)).toBe(true)
   })
 })

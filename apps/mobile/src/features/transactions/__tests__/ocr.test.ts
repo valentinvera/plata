@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test"
 
 import { selectTransactionText } from "../ocr"
+import { parseTransactionText } from "../parser"
 
 describe("selectTransactionText", () => {
   it("picks the line that reads like a payment", () => {
@@ -41,5 +42,80 @@ describe("selectTransactionText", () => {
 
   it("returns null for blank text", () => {
     expect(selectTransactionText("   \n  ")).toBeNull()
+  })
+})
+
+describe("adjacent OCR context", () => {
+  it.each(["el 05/09/2026", "05/09/2026"])(
+    "keeps a payment date printed on the next line: %s",
+    (date) => {
+      const selected = selectTransactionText(`Pagaste $500 en SUBE\n${date}`)
+      expect(parseTransactionText(selected ?? "")).toMatchObject({
+        amount: 50_000,
+        merchant: "SUBE",
+        occurredAt: new Date(2026, 8, 5, 12).getTime(),
+      })
+    }
+  )
+
+  it("keeps a merchant printed below the amount", () => {
+    const selected = selectTransactionText("Pagaste $500\nen SUBE")
+    expect(parseTransactionText(selected ?? "")).toMatchObject({
+      amount: 50_000,
+      merchant: "SUBE",
+    })
+  })
+
+  it("keeps a date printed above the payment", () => {
+    const selected = selectTransactionText("05/09/2026\nPagaste $500 en SUBE")
+    expect(parseTransactionText(selected ?? "")).toMatchObject({
+      amount: 50_000,
+      merchant: "SUBE",
+      occurredAt: new Date(2026, 8, 5, 12).getTime(),
+    })
+  })
+
+  it("does not append an unrelated footer to a complete payment", () => {
+    expect(
+      selectTransactionText("Pagaste $500 en SUBE\nGracias por operar")
+    ).toBe("Pagaste $500 en SUBE")
+  })
+
+  it("never combines two complete payments to borrow the second date or currency", () => {
+    const selected = selectTransactionText(
+      "Pagaste $500 en SUBE\nCobraste USD 100 en ACME el 05/09/2026"
+    )
+    expect(selected).toBe("Cobraste USD 100 en ACME el 05/09/2026")
+    expect(parseTransactionText(selected ?? "")).toMatchObject({
+      amount: 10_000,
+      currency: "USD",
+      kind: "income",
+      merchant: "ACME",
+      occurredAt: new Date(2026, 8, 5, 12).getTime(),
+    })
+  })
+
+  it("does not merge adjacent amounts even without payment verbs", () => {
+    expect(selectTransactionText("$500 en SUBE\n$200 el 05/09/2026")).toBe(
+      "$500 en SUBE"
+    )
+  })
+
+  it("does not join two payment labels across a missing amount", () => {
+    expect(
+      selectTransactionText("Compra pendiente\nCobraste $100 en ACME")
+    ).toBe("Cobraste $100 en ACME")
+  })
+
+  it("still excludes balances and limits beside a dated payment", () => {
+    const selected = selectTransactionText(
+      "Saldo USD $50.000\nPagaste $500 en SUBE\nel 05/09/2026\nLímite de compra $80.000"
+    )
+    expect(parseTransactionText(selected ?? "")).toMatchObject({
+      amount: 50_000,
+      currency: "ARS",
+      merchant: "SUBE",
+      occurredAt: new Date(2026, 8, 5, 12).getTime(),
+    })
   })
 })
