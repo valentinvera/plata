@@ -140,3 +140,70 @@ describe("imported dates without a year", () => {
     ).toBeNull()
   })
 })
+
+describe("exact imported monetary amounts", () => {
+  it.each([
+    ["1.234.567,89", 123_456_789],
+    ["1,234,567.89", 123_456_789],
+    ["$1,234", 123_400],
+    ["USD 500", 50_000],
+    ["ARS 500", 50_000],
+    ["  U$S 1.234,50  ", 123_450],
+    ["0,01", 1],
+    ["0.29", 29],
+    ["90071992547409,90", 9_007_199_254_740_990],
+    ["90071992547409,91", Number.MAX_SAFE_INTEGER],
+  ])(
+    "parses the complete supported amount %s into exact cents",
+    (raw, cents) => {
+      expect(parseAmountToCents(String(raw))).toBe(cents)
+    }
+  )
+
+  it.each([
+    "1,2,3",
+    "12.34.56",
+    "1.23,45",
+    "12,3456",
+    "1234.567",
+    "12abc34",
+    "Infinity",
+    "1e3",
+    "90071992547409,92",
+    "90071992547409,93",
+  ])(
+    "rejects malformed or unsafe input instead of truncating it: %s",
+    (raw) => {
+      expect(parseAmountToCents(raw)).toBeNull()
+    }
+  )
+
+  it.each([
+    "Pagaste $12,34,56 en SUBE",
+    "Pagaste $12.34.56 en SUBE",
+    "Pagaste 12,34,56 en SUBE",
+    "Pagaste 12.34.56 en SUBE",
+    "Pagaste $90071992547409,93 en SUBE",
+  ])(
+    "does not accept a valid-looking prefix of an invalid amount: %s",
+    (text) => {
+      expect(parseTransactionText(text).amount).toBeNull()
+    }
+  )
+
+  it.each([
+    ["Pagaste USD 500 en ACME", 50_000, "USD"],
+    ["Pagaste ARS 500 en SUBE", 50_000, "ARS"],
+    ["Pagaste $1,234.56 en ACME", 123_456, "ARS"],
+    ["Pagaste $500.", 50_000, "ARS"],
+    ["Pagaste $12,34, gracias.", 1234, "ARS"],
+  ])(
+    "keeps currency markers and sentence punctuation separate from the amount: %s",
+    (text, amount, currency) => {
+      expect(parseTransactionText(String(text))).toMatchObject({
+        amount,
+        currency,
+      })
+    }
+  )
+})

@@ -226,3 +226,38 @@ describe("captured notification dates", () => {
     ).toBe(new Date(2023, 8, 5, 12).getTime())
   })
 })
+
+describe("notification amount validation", () => {
+  const payload = {
+    app: "com.bank",
+    bigText: "",
+    text: "",
+    time: "1700000000000",
+    title: "Pago",
+  }
+
+  it.each(["$12,34,56", "$12.34.56", "$90071992547409,93"])(
+    "does not create a suggestion for %s",
+    (amount) => {
+      expect(
+        buildNotificationTransaction({
+          ...payload,
+          text: `Pagaste ${amount} en SUBE`,
+        })
+      ).toBeNull()
+    }
+  )
+
+  it("imports an integer USD amount without requiring a dollar symbol", () => {
+    expect(
+      buildNotificationTransaction({
+        ...payload,
+        text: "Cobraste USD 500 en ACME",
+      })
+    ).toMatchObject({
+      amount: 50_000,
+      currency: "USD",
+      kind: "income",
+    })
+  })
+})

@@ -18,45 +18,42 @@ const MAX_DATE_YEAR_LOOKBACK = 8
 
 const DATE_REGEX = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/
 const MERCHANT_REGEX = /\ben\s+(.+?)(?=\s+(?:el|del|por)\s+(?:\d|\$)|\s+\$|$)/i
-const CURRENCY_AMOUNT_REGEX = /(?:\$|u\$s|us\$)\s*(\d[\d.,]*)/i
-const PLAIN_AMOUNT_REGEX =
-  /\b(\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?|\d+,\d{1,2}|\d+\.\d{1,2})\b/
-const NON_AMOUNT_CHARS = /[^\d.,]/g
-const TRAILING_THOUSANDS = /\.\d{3}$/
+const CURRENCY_AMOUNT_REGEX = /(?:\b(?:ARS|USD)|u\$s|us\$|\$)\s*(\d\S*)/i
+const PLAIN_AMOUNT_REGEX = /\b(\d[\d.,]*[.,]\d[\d.,]*)(?![\w.,])/
+const CURRENCY_PREFIX = /^(?:ARS|USD|u\$s|us\$|\$)\s*/i
+const CURRENCY_SUFFIX = /\s*(?:ARS|USD|u\$s|us\$|\$)$/i
+const ARGENTINE_AMOUNT_REGEX = /^(?:\d+|\d{1,3}(?:\.\d{3})+)(?:,\d{1,2})?$/
+const INTERNATIONAL_AMOUNT_REGEX = /^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d{1,2})?$/
+const TRAILING_AMOUNT_PUNCTUATION = /[.,;:!?)-]+$/
 
 export function parseAmountToCents(raw: string): number | null {
-  const cleaned = raw.replace(NON_AMOUNT_CHARS, "")
-
-  if (!cleaned) {
+  const value = raw
+    .trim()
+    .replace(CURRENCY_PREFIX, "")
+    .replace(CURRENCY_SUFFIX, "")
+    .trim()
+  const isArgentine = ARGENTINE_AMOUNT_REGEX.test(value)
+  if (!(isArgentine || INTERNATIONAL_AMOUNT_REGEX.test(value))) {
     return null
   }
 
-  const hasComma = cleaned.includes(",")
-  const hasDot = cleaned.includes(".")
-  let normalized = cleaned
-
-  if (hasComma && hasDot) {
-    normalized =
-      cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".")
-        ? cleaned.replace(/\./g, "").replace(",", ".")
-        : cleaned.replace(/,/g, "")
-  } else if (hasComma) {
-    normalized = cleaned.replace(",", ".")
-  } else if (hasDot && TRAILING_THOUSANDS.test(cleaned)) {
-    normalized = cleaned.replace(/\./g, "")
-  }
-
-  const value = Number.parseFloat(normalized)
-  return Number.isFinite(value) ? Math.round(value * 100) : null
+  const ungrouped = isArgentine
+    ? value.replace(/\./g, "")
+    : value.replace(/,/g, "")
+  const [whole, fraction = ""] = ungrouped.split(isArgentine ? "," : ".")
+  // Build integer cents directly: multiplying a parsed decimal can round away
+  // centavos, and parseFloat would silently accept malformed numeric prefixes.
+  const cents = Number(`${whole}${fraction.padEnd(2, "0")}`)
+  return Number.isSafeInteger(cents) ? cents : null
 }
 
 function extractAmountToken(text: string): string | null {
-  const withCurrency = text.match(CURRENCY_AMOUNT_REGEX)?.[1]
-  if (withCurrency) {
-    return withCurrency
-  }
-
-  return text.match(PLAIN_AMOUNT_REGEX)?.[1] ?? null
+  const token =
+    text.match(CURRENCY_AMOUNT_REGEX)?.[1] ??
+    text.match(PLAIN_AMOUNT_REGEX)?.[1]
+  // Sentence punctuation belongs to the message, not the numeric amount. Keep
+  // the rest of the token intact so malformed grouping is rejected as a whole.
+  return token?.replace(TRAILING_AMOUNT_PUNCTUATION, "") ?? null
 }
 
 function detectCurrency(normalized: string): Currency {
