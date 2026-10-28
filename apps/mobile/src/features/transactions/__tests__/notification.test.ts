@@ -167,3 +167,62 @@ describe("buildNotificationTransaction", () => {
     ).toBeNull()
   })
 })
+
+describe("captured notification dates", () => {
+  const now = new Date(2026, 0, 5, 9).getTime()
+  const captured = new Date(2024, 8, 6, 18, 30).getTime()
+  const payload = {
+    app: "com.bank",
+    bigText: "",
+    text: "Pagaste $500 en SUBE el 05/09",
+    time: String(captured),
+    title: "Pago",
+  }
+
+  it("resolves an omitted year against capture time rather than delayed processing", () => {
+    expect(buildNotificationTransaction(payload, now)?.occurredAt).toBe(
+      new Date(2024, 8, 5, 12).getTime()
+    )
+  })
+
+  it("resolves December against a notification captured in January", () => {
+    expect(
+      buildNotificationTransaction(
+        {
+          ...payload,
+          time: String(now),
+          text: "Pagaste $500 en SUBE el 31/12",
+        },
+        now
+      )?.occurredAt
+    ).toBe(new Date(2025, 11, 31, 12).getTime())
+  })
+
+  it.each(["", "invalid", "-1", "Infinity", "1e100", "1.5"])(
+    "falls back to processing time for an invalid capture time: %s",
+    (time) => {
+      expect(
+        buildNotificationTransaction(
+          {
+            ...payload,
+            time,
+            text: "Pagaste $500 en SUBE el 31/12",
+          },
+          now
+        )?.occurredAt
+      ).toBe(new Date(2025, 11, 31, 12).getTime())
+    }
+  )
+
+  it("preserves an explicit year regardless of capture and processing time", () => {
+    expect(
+      buildNotificationTransaction(
+        {
+          ...payload,
+          text: "Pagaste $500 en SUBE el 05/09/2023",
+        },
+        now
+      )?.occurredAt
+    ).toBe(new Date(2023, 8, 5, 12).getTime())
+  })
+})

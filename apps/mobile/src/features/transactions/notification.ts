@@ -79,7 +79,14 @@ export function hasTransactionSignal(text: string): boolean {
 
 function notificationTimestamp(payload: NotificationPayload): number | null {
   const value = Number(payload.time)
-  return Number.isFinite(value) && value > 0 ? value : null
+  if (
+    !Number.isSafeInteger(value) ||
+    value <= 0 ||
+    !Number.isFinite(new Date(value).getTime())
+  ) {
+    return null
+  }
+  return value
 }
 
 export function notificationTransactionId(
@@ -106,7 +113,9 @@ export function buildNotificationTransaction(
     return null
   }
 
-  const parsed = parseTransactionText(text, now)
+  // The queue may be drained much later, including after a year boundary.
+  const capturedAt = notificationTimestamp(payload) ?? now
+  const parsed = parseTransactionText(text, capturedAt)
 
   if (parsed.amount === null || parsed.amount <= 0) {
     return null
@@ -126,7 +135,7 @@ export function buildNotificationTransaction(
     kind: parsed.kind,
     merchant: parsed.merchant,
     note: null,
-    occurredAt: parsed.occurredAt ?? notificationTimestamp(payload) ?? now,
+    occurredAt: parsed.occurredAt ?? capturedAt,
     rawRef: text,
     source: "notification",
     state: "suggested",

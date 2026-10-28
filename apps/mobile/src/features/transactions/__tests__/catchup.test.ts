@@ -99,3 +99,18 @@ describe("catch-up non-transaction amounts", () => {
     ])
   })
 })
+
+describe("catch-up across a year boundary", () => {
+  it("keeps December and January imports in the right years", () => {
+    const suggestions = buildCatchUpSuggestions(
+      ["Pagaste $500 en SUBE el 31/12", "Pagaste $1.000 en CARREFOUR el 02/01"],
+      new Date(2026, 0, 5, 9).getTime()
+    ).filter(isSuggestionValid)
+
+    expect(suggestions.map(({ occurredAt }) => occurredAt)).toEqual([
+      new Date(2025, 11, 31, 12).getTime(),
+      new Date(2026, 0, 2, 12).getTime(),
+    ])
+    expect(suggestions.map(({ amount }) => amount)).toEqual([50_000, 100_000])
+  })
+})
