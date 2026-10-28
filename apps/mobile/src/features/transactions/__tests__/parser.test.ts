@@ -245,3 +245,52 @@ describe("currency belonging to the imported amount", () => {
     expect(parseTransactionText("Pagaste USDT 100 en ACME").amount).toBeNull()
   })
 })
+
+describe("explicit movement direction", () => {
+  it.each([
+    "Pagaste $500 de honorarios",
+    "Abonaste $500 de sueldo",
+    "Compraste $500 en Sueldo Café",
+    "Pagaste $500 en Cobraste Café",
+    "Transferiste $500 de honorarios",
+    "Enviaste $500 de sueldo",
+  ])("keeps an explicit outgoing payment as an expense: %s", (text) => {
+    expect(parseTransactionText(text)).toMatchObject({
+      amount: 50_000,
+      kind: "expense",
+    })
+  })
+
+  it.each([
+    "Recibiste $500 en Pagaste Café",
+    "Cobraste $500 de una compra",
+    "Acreditaron $500 por un pago",
+  ])("keeps an explicit incoming movement as income: %s", (text) => {
+    expect(parseTransactionText(text)).toMatchObject({
+      amount: 50_000,
+      kind: "income",
+    })
+  })
+
+  it.each(["Sueldo $500", "$500 de honorarios"])(
+    "keeps the existing income fallback without an explicit action: %s",
+    (text) => {
+      expect(parseTransactionText(text)).toMatchObject({
+        amount: 50_000,
+        kind: "income",
+      })
+    }
+  )
+
+  it("keeps amount, currency, merchant and date intact when correcting direction", () => {
+    expect(
+      parseTransactionText("Pagaste USD $500 en Sueldo Café el 05/09/2026")
+    ).toEqual({
+      amount: 50_000,
+      currency: "USD",
+      kind: "expense",
+      merchant: "Sueldo Café",
+      occurredAt: new Date(2026, 8, 5, 12).getTime(),
+    })
+  })
+})

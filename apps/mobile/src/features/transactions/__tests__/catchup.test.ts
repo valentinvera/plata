@@ -181,3 +181,16 @@ describe("catch-up category phrase whitespace", () => {
     expect(suggestion).toMatchObject({ amount: 50_000, categoryId: "pets" })
   })
 })
+
+describe("catch-up movement direction", () => {
+  it("distinguishes paid fees from received fees in the same batch", () => {
+    const suggestions = buildCatchUpSuggestions([
+      "Pagaste $500 de honorarios",
+      "Cobraste $500 de honorarios",
+    ]).filter(isSuggestionValid)
+    expect(suggestions.map(({ amount, kind }) => ({ amount, kind }))).toEqual([
+      { amount: 50_000, kind: "expense" },
+      { amount: 50_000, kind: "income" },
+    ])
+  })
+})
