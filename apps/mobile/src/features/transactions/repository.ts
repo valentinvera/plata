@@ -12,7 +12,12 @@ import { createId } from "./id"
 import { resolveDefaultAccountId } from "./preferences"
 import { getPreferences } from "./preferences-repository"
 import { rowToTransaction, type TransactionRow } from "./row"
-import type { NewTransaction, Transaction, TransactionState } from "./types"
+import type {
+  NewTransaction,
+  Transaction,
+  TransactionKind,
+  TransactionState,
+} from "./types"
 
 export const TRANSACTION_COLUMNS =
   "id, amount, category_id, confidence, created_at, currency, kind, merchant, note, occurred_at, raw_ref, source, state, updated_at, account_id"
@@ -25,6 +30,7 @@ export interface TransactionUpdate {
   accountId?: string | null
   amount?: number
   categoryId?: string
+  kind?: TransactionKind
   merchant?: string | null
   occurredAt?: number
 }
@@ -33,6 +39,7 @@ const UPDATE_COLUMNS: readonly [keyof TransactionUpdate, string][] = [
   ["accountId", "account_id"],
   ["amount", "amount"],
   ["categoryId", "category_id"],
+  ["kind", "kind"],
   ["merchant", "merchant"],
   ["occurredAt", "occurred_at"],
 ]
