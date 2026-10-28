@@ -3,6 +3,9 @@
 @import "uniwind";
 @import "heroui-native/styles";
 
+@source "../src/features/home";
+@source "../components/finance";
+
 /* Plata brand palette (brand/tokens.json) mapped onto HeroUI Native tokens.
    The overrides must live under `:root` to match how `heroui-native/styles`
    declares them; without it the un-scoped rule loses and the accent stays blue.
