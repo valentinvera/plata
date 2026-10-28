@@ -3,7 +3,7 @@ import { describe, expect, it } from "bun:test"
 import type { Account } from "../accounts"
 import { DEFAULT_CATEGORIES } from "../categories"
 import { buildExport, transactionsToCsv, transactionsToJson } from "../export"
-import type { Transaction } from "../types"
+import type { Category, Transaction } from "../types"
 
 const ACCOUNTS: readonly Account[] = [
   { createdAt: 0, id: "cash", kind: "cash", name: "Efectivo" },
@@ -90,11 +90,14 @@ describe("transactionsToCsv", () => {
 describe("transactionsToJson", () => {
   it("round-trips the transactions and accounts with a version", () => {
     const transaction = makeTransaction()
-    const parsed = JSON.parse(transactionsToJson([transaction], ACCOUNTS))
+    const parsed = JSON.parse(
+      transactionsToJson([transaction], ACCOUNTS, DEFAULT_CATEGORIES)
+    )
 
     expect(parsed.version).toBe(1)
     expect(parsed.transactions).toEqual([transaction])
     expect(parsed.accounts).toEqual(ACCOUNTS)
+    expect(parsed.categories).toEqual(DEFAULT_CATEGORIES)
   })
 })
 
@@ -116,5 +119,71 @@ describe("buildExport", () => {
 
     expect(bundle.filename).toBe("plata-transactions.json")
     expect(bundle.mimeType).toBe("application/json")
+  })
+})
+
+const CUSTOM_CATEGORY: Category = {
+  id: "pets-custom",
+  keywords: ["veterinaria", "pet shop"],
+  name: "Mascotas y veterinaria",
+}
+
+describe("saved category exports", () => {
+  it("uses a custom category name in the CSV bundle", () => {
+    const bundle = buildExport(
+      "csv",
+      [makeTransaction({ categoryId: CUSTOM_CATEGORY.id })],
+      [CUSTOM_CATEGORY, ...DEFAULT_CATEGORIES],
+      ACCOUNTS
+    )
+
+    expect(bundle.content.split("\n")[1]).toBe(
+      "2026-01-01T12:00:00.000Z,1234.56,ARS,expense,Mascotas y veterinaria,Carrefour,,Efectivo,manual,confirmed"
+    )
+  })
+
+  it("uses the latest saved name after a category is renamed", () => {
+    const transaction = makeTransaction({ categoryId: CUSTOM_CATEGORY.id })
+    const renamed = { ...CUSTOM_CATEGORY, name: "Cuidados de mascotas" }
+    const csv = buildExport("csv", [transaction], [renamed], ACCOUNTS)
+    const json = buildExport("json", [transaction], [renamed], ACCOUNTS)
+
+    expect(csv.content).toContain(",Cuidados de mascotas,")
+    expect(JSON.parse(json.content).categories).toEqual([renamed])
+    expect(transaction.categoryId).toBe(CUSTOM_CATEGORY.id)
+  })
+
+  it("keeps custom names and keywords with their transaction ids in JSON", () => {
+    const transaction = makeTransaction({ categoryId: CUSTOM_CATEGORY.id })
+    const categories = [CUSTOM_CATEGORY, ...DEFAULT_CATEGORIES]
+    const parsed = JSON.parse(
+      buildExport("json", [transaction], categories, ACCOUNTS).content
+    )
+
+    expect(parsed).toEqual({
+      accounts: ACCOUNTS,
+      categories,
+      transactions: [transaction],
+      version: 1,
+    })
+  })
+
+  it("exports category definitions even without transactions", () => {
+    const parsed = JSON.parse(
+      buildExport("json", [], [CUSTOM_CATEGORY], []).content
+    )
+
+    expect(parsed.categories).toEqual([CUSTOM_CATEGORY])
+    expect(parsed.transactions).toEqual([])
+  })
+
+  it("escapes custom category names for CSV and preserves them in JSON", () => {
+    const category = { ...CUSTOM_CATEGORY, name: '=SUM(A1), "Mascotas"' }
+    const transaction = makeTransaction({ categoryId: category.id })
+    const csv = buildExport("csv", [transaction], [category], ACCOUNTS)
+    const json = buildExport("json", [transaction], [category], ACCOUNTS)
+
+    expect(csv.content).toContain('"\'=SUM(A1), ""Mascotas"""')
+    expect(JSON.parse(json.content).categories[0].name).toBe(category.name)
   })
 })

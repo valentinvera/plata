@@ -1,17 +1,18 @@
 import { listAccounts } from "./account-repository"
-import { DEFAULT_CATEGORIES } from "./categories"
+import { listCategories } from "./category-repository"
 import { buildExport, type ExportBundle, type ExportFormat } from "./export"
 import { listAllTransactions } from "./repository"
 
-// Reads every non-deleted transaction (plus accounts for their labels) and
-// serializes it. Writing/sharing the file is left to the caller (UI follow-up).
+// Read saved categories as well as accounts so labels and custom definitions
+// survive the export. A failed read must not produce an incomplete file.
 export async function exportTransactions(
   format: ExportFormat
 ): Promise<ExportBundle> {
-  const [transactions, accounts] = await Promise.all([
+  const [transactions, accounts, categories] = await Promise.all([
     listAllTransactions(),
     listAccounts(),
+    listCategories(),
   ])
 
-  return buildExport(format, transactions, DEFAULT_CATEGORIES, accounts)
+  return buildExport(format, transactions, categories, accounts)
 }

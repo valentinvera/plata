@@ -76,9 +76,14 @@ export function transactionsToCsv(
 
 export function transactionsToJson(
   transactions: readonly Transaction[],
-  accounts: readonly Account[]
+  accounts: readonly Account[],
+  categories: readonly Category[]
 ): string {
-  return JSON.stringify({ accounts, transactions, version: 1 }, null, 2)
+  return JSON.stringify(
+    { accounts, categories, transactions, version: 1 },
+    null,
+    2
+  )
 }
 
 export function buildExport(
@@ -89,7 +94,7 @@ export function buildExport(
 ): ExportBundle {
   if (format === "json") {
     return {
-      content: transactionsToJson(transactions, accounts),
+      content: transactionsToJson(transactions, accounts, categories),
       filename: "plata-transactions.json",
       mimeType: "application/json",
     }
