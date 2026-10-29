@@ -398,3 +398,34 @@ describe("notification movement direction", () => {
     ).toMatchObject({ amount: 50_000, kind: "income", state: "suggested" })
   })
 })
+
+describe("notification installment dates", () => {
+  const capturedAt = new Date(2026, 9, 28, 10, 15).getTime()
+  const payload = {
+    app: "com.bank",
+    title: "Cuota 3/6",
+    bigText: "",
+    text: "Pagaste $5.000 en SUBE",
+    time: String(capturedAt),
+  }
+
+  it("uses capture time instead of turning the installment count into a date", () => {
+    expect(buildNotificationTransaction(payload)).toMatchObject({
+      amount: 500_000,
+      occurredAt: capturedAt,
+      state: "suggested",
+    })
+  })
+
+  it("uses the explicit receipt date after an installment title", () => {
+    expect(
+      buildNotificationTransaction({
+        ...payload,
+        text: `${payload.text} el 27/10/2026`,
+      })
+    ).toMatchObject({
+      amount: 500_000,
+      occurredAt: new Date(2026, 9, 27, 12).getTime(),
+    })
+  })
+})

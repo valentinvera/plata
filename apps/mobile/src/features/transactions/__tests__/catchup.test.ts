@@ -214,3 +214,20 @@ describe("catch-up incomplete payments", () => {
     ])
   })
 })
+
+describe("catch-up installment dates", () => {
+  it("retains the real date and leaves an undated installment unknown", () => {
+    const suggestions = buildCatchUpSuggestions(
+      [
+        "Cuota 3/6: Pagaste $5.000 en SUBE el 28/10/2026",
+        "Cuota 3/6: Pagaste $5.000 en SUBE",
+      ],
+      new Date(2026, 9, 28).getTime()
+    ).filter(isSuggestionValid)
+    expect(suggestions).toHaveLength(2)
+    expect(suggestions.map(({ occurredAt }) => occurredAt)).toEqual([
+      new Date(2026, 9, 28, 12).getTime(),
+      null,
+    ])
+  })
+})

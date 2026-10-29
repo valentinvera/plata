@@ -151,3 +151,25 @@ describe("incomplete OCR payments", () => {
     }
   )
 })
+
+describe("OCR installment dates", () => {
+  it("does not borrow a calendar date from an installment label", () => {
+    const selected = selectTransactionText("$5.000\nCuota 3/6")
+    expect(selected).not.toBeNull()
+    expect(parseTransactionText(selected ?? "")).toMatchObject({
+      amount: 500_000,
+      occurredAt: null,
+    })
+  })
+
+  it("keeps a real date below a payment with installment context", () => {
+    const selected = selectTransactionText(
+      "Cuota 3/6: Pagaste $5.000 en SUBE\n28/10/2026"
+    )
+    expect(parseTransactionText(selected ?? "")).toMatchObject({
+      amount: 500_000,
+      merchant: "SUBE",
+      occurredAt: new Date(2026, 9, 28, 12).getTime(),
+    })
+  })
+})

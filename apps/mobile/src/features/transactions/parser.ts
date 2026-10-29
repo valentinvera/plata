@@ -19,7 +19,9 @@ const DIRECTION_VERB =
 // Leap-day occurrences can be eight years apart around a non-leap century.
 const MAX_DATE_YEAR_LOOKBACK = 8
 
-const DATE_REGEX = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/
+const DATE_REGEX = /(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/g
+const INSTALLMENT_PREFIX = /\bcuotas?\s*(?:(?:nro\.?|n[°ºo.]?)\s*)?:?\s*$/i
+const INSTALLMENT_SUFFIX = /^\s+cuotas?\b/i
 const MERCHANT_REGEX = /\ben\s+(.+?)(?=\s+(?:el|del|por)\s+(?:\d|\$)|\s+\$|$)/i
 const CURRENCY_AMOUNT_REGEX =
   /(\b(?:ARS|USD|d[oó]lares|pesos)\b\s*\$?|\b(?:u\$s|us\$)|\$)\s*(\d\S*)/i
@@ -115,8 +117,24 @@ function resolveYear(rawYear: string | undefined, currentYear: number): number {
   return rawYear.length === 2 ? 2000 + value : value
 }
 
+// A slash-separated installment count is not a calendar date. Keep scanning
+// after labelled counts so a later receipt date still reaches year resolution.
+function findDate(text: string): RegExpMatchArray | null {
+  for (const match of text.matchAll(DATE_REGEX)) {
+    const start = match.index
+    const isInstallment =
+      !match[3] &&
+      (INSTALLMENT_PREFIX.test(text.slice(0, start)) ||
+        INSTALLMENT_SUFFIX.test(text.slice(start + match[0].length)))
+    if (!isInstallment) {
+      return match
+    }
+  }
+  return null
+}
+
 function parseDate(text: string, now: number): number | null {
-  const match = text.match(DATE_REGEX)
+  const match = findDate(text)
   const dayText = match?.[1]
   const monthText = match?.[2]
 
