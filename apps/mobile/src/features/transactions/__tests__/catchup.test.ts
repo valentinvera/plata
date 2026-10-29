@@ -194,3 +194,23 @@ describe("catch-up movement direction", () => {
     ])
   })
 })
+
+describe("catch-up incomplete payments", () => {
+  it("only offers completed movements from a mixed batch", () => {
+    const suggestions = buildCatchUpSuggestions([
+      "Pago rechazado $500 en SUBE",
+      "Transferencia pendiente $1.000 en ACME",
+      "Pago rechazado\n$500 en SUBE",
+      "Pagaste $500 en SUBE",
+      "Cobraste USD 100 en ACME",
+    ])
+    expect(suggestions).toHaveLength(5)
+    expect(
+      suggestions.slice(0, 3).every((item) => !isSuggestionValid(item))
+    ).toBe(true)
+    expect(suggestions.filter(isSuggestionValid)).toMatchObject([
+      { amount: 50_000, merchant: "SUBE", kind: "expense" },
+      { amount: 10_000, currency: "USD", merchant: "ACME", kind: "income" },
+    ])
+  })
+})

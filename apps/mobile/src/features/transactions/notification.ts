@@ -41,7 +41,7 @@ const INCOMPLETE_TRANSACTION_PATTERNS = [
   /\b(?:rechazamos|cancelamos|anulamos)\s+(?:tu|el|la)\s+(?:pago|compra|transferencia|debito|operacion)\b/,
 ]
 
-function isIncompleteTransaction(
+export function isIncompleteTransaction(
   text: string,
   merchant: string | null
 ): boolean {

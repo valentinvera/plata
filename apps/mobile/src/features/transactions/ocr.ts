@@ -1,4 +1,4 @@
-import { hasTransactionSignal } from "./notification"
+import { hasTransactionSignal, isIncompleteTransaction } from "./notification"
 import { parseTransactionText } from "./parser"
 import { containsKeyword, normalizeText } from "./text"
 
@@ -43,30 +43,55 @@ function score(text: string): number {
   return value
 }
 
-// OCR returns every line on the screenshot. Score single lines and adjacent
-// pairs (a payment label and its amount often sit on separate lines), skipping
-// balance lines, and prefer candidates that retain their merchant and date.
-export function selectTransactionText(ocrText: string): string | null {
-  const lines = ocrText
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
+function isIncomplete(text: string): boolean {
+  return isIncompleteTransaction(text, parseTransactionText(text).merchant)
+}
 
-  if (lines.length === 0) {
-    return null
+// Preserve a rejected/pending label's relationship to its amount before
+// scoring candidates. Otherwise the isolated amount could still win after
+// its status line has been removed. A new payment signal starts another entry.
+function incompleteLineIndexes(lines: readonly string[]): Set<number> {
+  const rejected = new Set<number>()
+  for (const [index, line] of lines.entries()) {
+    const next = lines[index + 1]
+    let end = index
+    if (!isIncomplete(line)) {
+      if (
+        !next ||
+        (hasTransactionSignal(line) && hasTransactionSignal(next)) ||
+        !isIncomplete(`${line} ${next}`)
+      ) {
+        continue
+      }
+      end += 1
+      rejected.add(end)
+    }
+    rejected.add(index)
+    const amountLine = lines[end + 1]
+    if (
+      amountLine &&
+      !hasTransactionSignal(amountLine) &&
+      parseTransactionText(amountLine).amount !== null
+    ) {
+      rejected.add(end + 1)
+    }
   }
+  return rejected
+}
 
+function transactionCandidates(lines: readonly string[]): string[] {
   const candidates: string[] = []
+  const rejected = incompleteLineIndexes(lines)
 
   for (const [index, line] of lines.entries()) {
-    if (isNonTransactionLine(line)) {
+    if (rejected.has(index) || isNonTransactionLine(line)) {
       continue
     }
 
     candidates.push(line)
 
     const next = lines[index + 1]
-    if (!next || isNonTransactionLine(next)) {
+    if (!next || rejected.has(index + 1) || isNonTransactionLine(next)) {
       continue
     }
 
@@ -86,9 +111,25 @@ export function selectTransactionText(ocrText: string): string | null {
     candidates.push(`${line} ${continuation}`)
   }
 
+  return candidates
+}
+
+// OCR returns every line on the screenshot. Score single lines and adjacent
+// pairs (a payment label and its amount often sit on separate lines), skipping
+// balance lines, and prefer candidates that retain their merchant and date.
+export function selectTransactionText(ocrText: string): string | null {
+  const lines = ocrText
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0)
+
+  if (lines.length === 0) {
+    return null
+  }
+
   let best: { score: number; text: string } | null = null
 
-  for (const text of candidates) {
+  for (const text of transactionCandidates(lines)) {
     const candidate = { score: score(text), text }
     if (best === null || candidate.score > best.score) {
       best = candidate

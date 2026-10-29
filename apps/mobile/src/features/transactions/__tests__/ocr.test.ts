@@ -119,3 +119,35 @@ describe("adjacent OCR context", () => {
     })
   })
 })
+
+describe("incomplete OCR payments", () => {
+  it.each([
+    "Pago rechazado $500 en SUBE",
+    "Compra cancelada $500 en SUBE",
+    "Transferencia pendiente $1.000 en ACME",
+    "Pago en proceso $500 en SUBE",
+    "Transferencia programada $1.000 en ACME",
+    "No se pudo realizar el pago de $500 en SUBE",
+    "Pago rechazado\n$500 en SUBE",
+    "Transferencia\npendiente\n$1.000 en ACME",
+  ])("does not select an incomplete payment: %s", (text) => {
+    expect(selectTransactionText(text)).toBeNull()
+  })
+
+  it("keeps a separate completed payment after an incomplete one", () => {
+    expect(
+      selectTransactionText(
+        "Pago rechazado\n$500 en SUBE\nCobraste $100 en ACME"
+      )
+    ).toBe("Cobraste $100 en ACME")
+  })
+
+  it.each(["Pago Pendiente", "Compra Cancelada"])(
+    "keeps a merchant whose name resembles a status: %s",
+    (merchant) => {
+      expect(selectTransactionText(`Pagaste $500 en ${merchant}`)).toBe(
+        `Pagaste $500 en ${merchant}`
+      )
+    }
+  )
+})
