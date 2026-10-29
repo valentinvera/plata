@@ -9,10 +9,10 @@ import {
   budgetProgress,
   budgetSummary,
 } from "@/src/features/transactions/budget"
-import { DEFAULT_CATEGORIES } from "@/src/features/transactions/categories"
 import { formatAmount } from "@/src/features/transactions/format"
 import {
   useBudgets,
+  useCategories,
   useSetBudget,
   useTransactionsInRange,
 } from "@/src/features/transactions/hooks"
@@ -20,9 +20,6 @@ import { parseAmountToCents } from "@/src/features/transactions/parser"
 import { monthRange } from "@/src/features/transactions/periods"
 
 const DEFAULT_CURRENCY = "ARS"
-const BUDGETABLE_CATEGORIES = DEFAULT_CATEGORIES.filter(
-  (category) => category.id !== "income"
-)
 
 function formatInputAmount(cents: number): string {
   return (cents / 100).toFixed(2)
@@ -59,8 +56,10 @@ function BudgetRow({ progress }: { progress: BudgetProgress }) {
   return (
     <Card className="mt-3 p-4">
       <View className="flex-row items-center justify-between">
-        <Text className="font-medium text-foreground">{category.name}</Text>
-        <Text className="text-muted text-sm">
+        <Text className="min-w-0 flex-1 font-medium text-foreground">
+          {category.name}
+        </Text>
+        <Text className="ml-3 shrink-0 text-muted text-sm">
           Spent {formatAmount(spent, DEFAULT_CURRENCY)}
         </Text>
       </View>
@@ -98,8 +97,8 @@ function BudgetRow({ progress }: { progress: BudgetProgress }) {
         <Input
           isInvalid={isInvalid}
           keyboardType="decimal-pad"
+          onBlur={commit}
           onChangeText={setValue}
-          onEndEditing={commit}
           placeholder="No limit"
           value={value}
         />
@@ -130,6 +129,13 @@ export default function BudgetsScreen() {
     refetch: refetchBudgets,
   } = useBudgets()
 
+  const {
+    data: categoriesData,
+    isError: categoriesError,
+    isLoading: categoriesLoading,
+    refetch: refetchCategories,
+  } = useCategories()
+
   // Refresh the range when the screen regains focus so a month boundary is not missed.
   useFocusEffect(
     useCallback(() => {
@@ -137,8 +143,8 @@ export default function BudgetsScreen() {
     }, [])
   )
 
-  const isLoading = transactionsLoading || budgetsLoading
-  const isError = transactionsError || budgetsError
+  const isLoading = transactionsLoading || budgetsLoading || categoriesLoading
+  const isError = transactionsError || budgetsError || categoriesError
 
   const progress = useMemo(() => {
     const confirmed = (transactionsData ?? []).filter(
@@ -146,15 +152,19 @@ export default function BudgetsScreen() {
     )
     return budgetProgress(
       confirmed,
-      BUDGETABLE_CATEGORIES,
+      (categoriesData ?? []).filter((category) => category.id !== "income"),
       budgetsData ?? [],
       DEFAULT_CURRENCY
     )
-  }, [budgetsData, transactionsData])
+  }, [budgetsData, categoriesData, transactionsData])
 
   const handleRetry = useCallback(async () => {
-    await Promise.all([refetchTransactions(), refetchBudgets()])
-  }, [refetchBudgets, refetchTransactions])
+    await Promise.all([
+      refetchTransactions(),
+      refetchBudgets(),
+      refetchCategories(),
+    ])
+  }, [refetchBudgets, refetchCategories, refetchTransactions])
 
   const summary = useMemo(() => budgetSummary(progress), [progress])
 
