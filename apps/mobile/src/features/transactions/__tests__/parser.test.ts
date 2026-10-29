@@ -294,3 +294,63 @@ describe("explicit movement direction", () => {
     })
   })
 })
+
+describe("installment numbers versus movement dates", () => {
+  const now = new Date(2026, 9, 28, 9).getTime()
+
+  it.each([
+    "Cuota 3/6",
+    "CUOTA: 03/06",
+    "Cuota n° 3/6",
+    "Cuota nro. 3/6",
+    "3/6 cuotas",
+    "Cuota\n3/6",
+  ])(
+    "leaves the date unknown when only an installment is present: %s",
+    (installment) => {
+      expect(
+        parseTransactionText(`${installment}: Pagaste $5.000`, now)
+      ).toMatchObject({
+        amount: 500_000,
+        kind: "expense",
+        occurredAt: null,
+      })
+    }
+  )
+
+  it.each(["28/10/2026", "28/10/26", "28/10"])(
+    "uses the real date after the installment label: %s",
+    (date) => {
+      expect(
+        parseTransactionText(
+          `Cuota 3/6: Pagaste $5.000 en SUBE el ${date}`,
+          now
+        )
+      ).toMatchObject({
+        amount: 500_000,
+        merchant: "SUBE",
+        occurredAt: new Date(2026, 9, 28, 12).getTime(),
+      })
+    }
+  )
+
+  it("retains a date before the installment information", () => {
+    expect(
+      parseTransactionText("28/10/2026 Pagaste $5.000. Cuota 3/6", now)
+        .occurredAt
+    ).toBe(new Date(2026, 9, 28, 12).getTime())
+  })
+
+  it("does not discard an explicit full date after the word cuota", () => {
+    expect(
+      parseTransactionText("Pago de cuota 03/06/2026 por $5.000", now)
+        .occurredAt
+    ).toBe(new Date(2026, 5, 3, 12).getTime())
+  })
+
+  it("keeps an unlabelled calendar date", () => {
+    expect(
+      parseTransactionText("Pagaste $5.000 el 03/06", now).occurredAt
+    ).toBe(new Date(2026, 5, 3, 12).getTime())
+  })
+})
